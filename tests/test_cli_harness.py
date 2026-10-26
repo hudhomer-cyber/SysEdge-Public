@@ -1,8 +1,8 @@
 """CLI harness: every subcommand's --help, plus smoke runs of read-mostly
-commands against an empty fake graph. Catches NameError / AttributeError /
-safe-driver false positives that only show up when a command actually runs.
+commands against an empty SQLite graph. Catches NameError / AttributeError
+that only show up when a command actually runs.
 
-No database required. Run: python3 -m pytest tests/ -v
+No Neo4j required. Run: python3 -m pytest tests/ -v
 """
 import importlib.util
 import os
@@ -84,16 +84,24 @@ class _RawDriver:
         pass
 
 
+_SQLITE_SCRIPT = _ROOT / "scripts" / "sys_edge_sqlite.py"
+_be_spec = importlib.util.spec_from_file_location("sys_edge_sqlite_h", _SQLITE_SCRIPT)
+_be = importlib.util.module_from_spec(_be_spec)
+_be_spec.loader.exec_module(_be)
+
+
 @pytest.fixture
 def fake_db(monkeypatch, tmp_path):
-    monkeypatch.chdir(tmp_path)  # main() chdirs to _root; restore cwd afterwards
-    raw = _RawDriver()
-    # Wrap with the real _SafeDriver so its DELETE guard is exercised
-    monkeypatch.setattr(se, "_driver",
-                        lambda admin=False: raw if admin else se._SafeDriver(raw))
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(se, "_root", tmp_path)
-    monkeypatch.setattr(se, "_require_licence", lambda *a, **k: None)
-    return raw
+    monkeypatch.setenv("SYSEDGE_BACKEND", "sqlite")
+    # Create an initialised SQLite database so smoke commands don't error on missing file
+    db_dir = tmp_path / "data"
+    db_dir.mkdir()
+    _be.Store(db_dir / "sysedge.sqlite3", create=True).close()
+    # Write a minimal sysedge.yaml so _project_config() resolves correctly
+    (tmp_path / "sysedge.yaml").write_text("backend: sqlite\ninstances: [core]\n")
+    return None
 
 
 def _run_cli(monkeypatch, argv):

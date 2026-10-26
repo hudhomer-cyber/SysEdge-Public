@@ -452,3 +452,71 @@ def test_concurrent_writers_get_unique_ids(env, capsys):
     con.close()
     assert len(ids) == 30 and len(set(ids)) == 30
     assert sorted(int(i.split("-")[1]) for i in ids) == list(range(1, 31))
+
+
+# ── create-adr (F-TRACE-002) ─────────────────────────────────────────────────
+
+def test_create_adr_creates_node(env, capsys):
+    seeded(env, capsys)
+    code, out, err = cli(env, capsys, "create-adr",
+                         "--id", "ADR-001",
+                         "--title", "Use SQLite as default backend",
+                         "--status", "adopted",
+                         "--decision", "SQLite removes the Docker dependency for single-machine use.",
+                         "--context", "Teams without Docker cannot run Neo4j easily.")
+    assert code == 0, err
+    assert "ADR-001" in out
+    n = node(env, "SysArchDecision", "ADR-001")
+    assert n is not None
+    assert n["title"] == "Use SQLite as default backend"
+    assert n["status"] == "adopted"
+
+
+def test_create_adr_links_to_system(env, capsys):
+    seeded(env, capsys)
+    cli(env, capsys, "create-adr", "--id", "ADR-002",
+        "--title", "Session-driven AI avoids external API calls",
+        "--status", "adopted")
+    con = sqlite3.connect(env / "graph.sqlite3")
+    edges = {(r[0], r[1], r[2]) for r in
+             con.execute("SELECT from_label, type, to_id FROM edges WHERE to_id='ADR-002'")}
+    con.close()
+    assert ("SysSystem", "GOVERNED_BY", "ADR-002") in edges
+
+
+def test_create_adr_addresses_standard(env, capsys):
+    seeded(env, capsys)
+    # seed a standard first
+    S = be.Store(env / "graph.sqlite3")
+    with S.write():
+        S.upsert("SysArchStd", "AS-SEC-001", {"title": "Input validation"})
+    S.close()
+    code, out, err = cli(env, capsys, "create-adr",
+                         "--id", "ADR-003",
+                         "--title", "Validate all seed file input at boundary",
+                         "--addresses", "AS-SEC-001")
+    assert code == 0, err
+    con = sqlite3.connect(env / "graph.sqlite3")
+    edges = {(r[0], r[1], r[2]) for r in
+             con.execute("SELECT from_id, type, to_id FROM edges WHERE from_id='ADR-003'")}
+    con.close()
+    assert ("ADR-003", "ADDRESSES", "AS-SEC-001") in edges
+
+
+def test_create_adr_supersedes_older(env, capsys):
+    seeded(env, capsys)
+    cli(env, capsys, "create-adr", "--id", "ADR-004",
+        "--title", "Use Neo4j (original)", "--status", "adopted")
+    code, out, err = cli(env, capsys, "create-adr",
+                         "--id", "ADR-005",
+                         "--title", "Use SQLite instead of Neo4j",
+                         "--status", "adopted",
+                         "--supersedes", "ADR-004")
+    assert code == 0, err
+    n_old = node(env, "SysArchDecision", "ADR-004")
+    assert n_old["status"] == "superseded"
+    con = sqlite3.connect(env / "graph.sqlite3")
+    edges = {(r[0], r[1], r[2]) for r in
+             con.execute("SELECT from_id, type, to_id FROM edges WHERE from_id='ADR-005'")}
+    con.close()
+    assert ("ADR-005", "SUPERSEDES", "ADR-004") in edges

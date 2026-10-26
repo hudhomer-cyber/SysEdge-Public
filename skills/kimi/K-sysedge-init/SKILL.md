@@ -29,8 +29,8 @@ Run these in order and read each result before the next step.
 ### Step 1 — Check the graph
 
 ```bash
-python3 cli/sys_edge.py init      # constraints, indexes and schema version — safe to re-run
-python3 cli/sys_edge.py status    # shows existing instances; an empty graph has none
+python3 scripts/sys_edge.py init      # constraints, indexes and schema version — safe to re-run
+python3 scripts/sys_edge.py status    # shows existing instances; an empty graph has none
 ```
 
 Exit code 2 means the graph database is unreachable or the password is missing: stop and ask the user to start Neo4j and set `SYSEDGE_NEO4J_PASSWORD`.
@@ -119,25 +119,25 @@ Show the proposed modules and features to the user as a table and adjust before 
 Write the JSON to `data/sys-init-<date>.json`, then:
 
 ```bash
-python3 cli/sys_edge.py seed data/sys-init-<date>.json --dry-run     # counts only, nothing written
-python3 cli/sys_edge.py seed data/sys-init-<date>.json               # allowed unfiltered only while the graph is empty
+python3 scripts/sys_edge.py seed data/sys-init-<date>.json --dry-run     # counts only, nothing written
+python3 scripts/sys_edge.py seed data/sys-init-<date>.json               # allowed unfiltered only while the graph is empty
 ```
 
-If the graph was not empty, seed each new instance instead: `python3 cli/sys_edge.py seed data/sys-init-<date>.json --instance billing`. Never use `--full-restore` here: it replaces every SysEdge node.
+If the graph was not empty, seed each new instance instead: `python3 scripts/sys_edge.py seed data/sys-init-<date>.json --instance billing`. Never use `--full-restore` here: it replaces every SysEdge node.
 
 ```bash
-python3 cli/sys_edge.py scan-code --all --yes
-python3 cli/sys_edge.py scan-tests --all --yes
-python3 cli/sys_edge.py scan-go-tests                  # only if the project has Go tests
-python3 cli/sys_edge.py briefing --instance <first-instance>
+python3 scripts/sys_edge.py scan-code --all --yes
+python3 scripts/sys_edge.py scan-tests --all --yes
+python3 scripts/sys_edge.py scan-go-tests                  # only if the project has Go tests
+python3 scripts/sys_edge.py briefing --instance <first-instance>
 ```
 
 
 ```bash
-python3 cli/sys_edge.py seed-standards
+python3 scripts/sys_edge.py seed-standards
 ```
 
-Show the briefing to the user so they can check the structure, and take a first backup: `python3 cli/sys_edge.py backup`.
+Show the briefing to the user so they can check the structure, and take a first backup: `python3 scripts/sys_edge.py backup`.
 
 ---
 

@@ -23,15 +23,15 @@ Review a `SysUserStory` or `SysUseCase` against the AS-REQ standards (actor comp
 
 ```bash
 # 1. Emit the request (one subject)
-python3 cli/sys_edge.py coverage-review --uc UC-BIL-001 --analyse --output-request /tmp/cov-req.json
+python3 scripts/sys_edge.py coverage-review --uc UC-BIL-001 --analyse --output-request /tmp/cov-req.json
 #    or every story of an instance, 5 subjects per request
-python3 cli/sys_edge.py coverage-review --instance billing --analyse --batch-size 5 --output-request /tmp/cov-req.json
+python3 scripts/sys_edge.py coverage-review --instance billing --analyse --batch-size 5 --output-request /tmp/cov-req.json
 
 # 2. In this Claude session: read the request, review each subject against each standard,
 #    and save JSON matching the request's responseFormat to /tmp/cov-res.json
 
 # 3. Apply the result; --file-proposals also files a SysProposal for every WARN or FAIL dimension
-python3 cli/sys_edge.py coverage-review --apply-results /tmp/cov-res.json --file-proposals
+python3 scripts/sys_edge.py coverage-review --apply-results /tmp/cov-res.json --file-proposals
 ```
 
 ## Direct AI workflow
@@ -39,15 +39,15 @@ python3 cli/sys_edge.py coverage-review --apply-results /tmp/cov-res.json --file
 The command calls an AI provider itself (see "AI modes and data egress").
 
 ```bash
-python3 cli/sys_edge.py coverage-review --us US-012                 # one story (AS-REQ review)
-python3 cli/sys_edge.py coverage-review --uc UC-BIL-001             # one use case (AS-REQ review)
-python3 cli/sys_edge.py coverage-review --instance billing          # every story of the instance (AS-REQ batch)
+python3 scripts/sys_edge.py coverage-review --us US-012                 # one story (AS-REQ review)
+python3 scripts/sys_edge.py coverage-review --uc UC-BIL-001             # one use case (AS-REQ review)
+python3 scripts/sys_edge.py coverage-review --instance billing          # every story of the instance (AS-REQ batch)
 ```
 
 **Chain review** (no `--us` / `--uc`): `--scope us|uc|both` with `--module MOD-…` or `--story US-…` checks whether the use cases cover each story (level 1) and the features cover each use case (level 2). Its verdicts are **PASS / PARTIAL / GAP / INSUFFICIENT**, and `--file-proposals` there files a proposal for every GAP.
 
 ```bash
-python3 cli/sys_edge.py coverage-review --module MOD-billing --scope both --file-proposals
+python3 scripts/sys_edge.py coverage-review --module MOD-billing --scope both --file-proposals
 ```
 
 ## AI modes and data egress

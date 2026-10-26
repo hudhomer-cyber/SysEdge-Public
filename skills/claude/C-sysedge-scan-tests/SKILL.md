@@ -17,7 +17,7 @@ Scan the test suite and register `SysTestPackage` and `SysTest` nodes. Optionall
 
 ## Prerequisites
 
-- `python3 cli/sys_edge.py init` has been run; modules have `testPaths` (the legacy `paths` property also works).
+- `python3 scripts/sys_edge.py init` has been run; modules have `testPaths` (the legacy `paths` property also works).
 
 **Connection settings** are read from the environment or from `.env` in the project root: `SYSEDGE_NEO4J_URI` (default `bolt://localhost:7688`), `SYSEDGE_NEO4J_USER` and `SYSEDGE_NEO4J_PASSWORD` (required). The legacy `NEO4J_*` names still work but print a deprecation notice; `NEO4J_AUTH` is never read. `SYSEDGE_PROJECT_ROOT` overrides the project root and `SYSEDGE_REPO` the repository id stamped on test paths.
 
@@ -26,22 +26,22 @@ Scan the test suite and register `SysTestPackage` and `SysTest` nodes. Optionall
 
 ```bash
 # Discover test directories and list them
-python3 cli/sys_edge.py scan-tests --all
+python3 scripts/sys_edge.py scan-tests --all
 
 # Scan everything discovered, without prompting
-python3 cli/sys_edge.py scan-tests --all --yes
+python3 scripts/sys_edge.py scan-tests --all --yes
 
 # One module, one instance, or one file
-python3 cli/sys_edge.py scan-tests --module MOD-billing
-python3 cli/sys_edge.py scan-tests --all --instance billing --yes
-python3 cli/sys_edge.py scan-tests --path tests/billing/test_invoices.py
+python3 scripts/sys_edge.py scan-tests --module MOD-billing
+python3 scripts/sys_edge.py scan-tests --all --instance billing --yes
+python3 scripts/sys_edge.py scan-tests --path tests/billing/test_invoices.py
 
 # Go tests (*_test.go) use a separate scanner
-python3 cli/sys_edge.py scan-go-tests
+python3 scripts/sys_edge.py scan-go-tests
 
 # Check that registered test paths still resolve in this repo (dry run, then repair)
-python3 cli/sys_edge.py check-test-links --verbose
-python3 cli/sys_edge.py check-test-links --fix --yes
+python3 scripts/sys_edge.py check-test-links --verbose
+python3 scripts/sys_edge.py check-test-links --fix --yes
 ```
 
 ## What it does
@@ -56,13 +56,13 @@ Test files rarely name the UC or feature they verify. `--analyse` writes a reque
 
 ```bash
 # 1. Emit the request (candidate UC/US/feature nodes, unlinked test files, their source and a prompt)
-python3 cli/sys_edge.py scan-tests --module MOD-billing --analyse --max-files 10 --output-request /tmp/scan-req.json
+python3 scripts/sys_edge.py scan-tests --module MOD-billing --analyse --max-files 10 --output-request /tmp/scan-req.json
 
 # 2. In this Claude session: read /tmp/scan-req.json, do the mapping, and save the JSON result
 #    in the format the request describes to /tmp/scan-res.json
 
 # 3. Apply the result
-python3 cli/sys_edge.py scan-tests --apply-ai-results /tmp/scan-res.json
+python3 scripts/sys_edge.py scan-tests --apply-ai-results /tmp/scan-res.json
 ```
 
 ## Output

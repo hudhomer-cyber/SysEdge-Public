@@ -40,6 +40,7 @@ no environment variables.
 """
 from __future__ import annotations
 
+import ast
 import contextlib
 import functools
 import json
@@ -89,9 +90,9 @@ SUPPORTED: set[str] = {
     "coverage-review", "quality-review", "audit-status",
     # Phase 5 — audit-test, session-close, config, set-external-ref, baseline
     "audit-test", "session-close", "config", "set-external-ref", "baseline",
-    # Phase 6 — defect alias, enhancement update, stale-test pruning, endpoint, reset, mcp, viz
+    # Phase 6 — defect alias, enhancement update, stale-test pruning, endpoint, reset
     "create-defect", "update-enhancement", "prune-stale-tests",
-    "link-endpoint", "reset", "mcp", "register-mcp", "open-viz",
+    "link-endpoint", "reset",
     # Phase 7 — scenario model
     "expire-note", "scenarios", "link-chapter", "link-scenario-story", "link-training",
     "actor-coverage",
@@ -325,15 +326,23 @@ class Store:
             "SELECT from_id, to_id FROM edges WHERE type=? AND from_label=? AND to_label=? "
             "ORDER BY from_id, to_id", (rtype, from_label, to_label))]
 
-    def out_ids(self, label, nid, rtype, to_label) -> list:
-        return [r[0] for r in self.q(
-            "SELECT to_id FROM edges WHERE from_label=? AND from_id=? AND type=? AND to_label=? "
-            "ORDER BY to_id", (label, nid, rtype, to_label))]
+    def out_ids(self, label, nid, rtype, to_label=None) -> list:
+        if to_label:
+            return [r[0] for r in self.q(
+                "SELECT to_id FROM edges WHERE from_label=? AND from_id=? AND type=? AND to_label=? "
+                "ORDER BY to_id", (label, nid, rtype, to_label))]
+        return [(r[0], r[1]) for r in self.q(
+            "SELECT to_label, to_id FROM edges WHERE from_label=? AND from_id=? AND type=? "
+            "ORDER BY to_id", (label, nid, rtype))]
 
-    def in_ids(self, label, nid, rtype, from_label) -> list:
-        return [r[0] for r in self.q(
-            "SELECT from_id FROM edges WHERE to_label=? AND to_id=? AND type=? AND from_label=? "
-            "ORDER BY from_id", (label, nid, rtype, from_label))]
+    def in_ids(self, label, nid, rtype, from_label=None) -> list:
+        if from_label:
+            return [r[0] for r in self.q(
+                "SELECT from_id FROM edges WHERE to_label=? AND to_id=? AND type=? AND from_label=? "
+                "ORDER BY from_id", (label, nid, rtype, from_label))]
+        return [(r[0], r[1]) for r in self.q(
+            "SELECT from_label, from_id FROM edges WHERE to_label=? AND to_id=? AND type=? "
+            "ORDER BY from_id", (label, nid, rtype))]
 
     # writes (call inside write())
     def upsert(self, label: str, nid: str, props: dict) -> None:
@@ -3021,7 +3030,7 @@ def cmd_record_run(args, root, S):
         updated = 0
         if per_test:
             for tid, outcome in per_test.items():
-                row = S.q("SELECT label FROM nodes WHERE label='SysTest' AND id=?", tid)
+                row = S.q("SELECT label FROM nodes WHERE label='SysTest' AND id=?", (tid,))
                 if row:
                     S.update("SysTest", tid, {"lastTestedAt": now, "lastStatus": outcome})
                     updated += 1
@@ -3034,7 +3043,7 @@ def cmd_record_run(args, root, S):
                     S.update("SysTest", r[0], {"lastTestedAt": now, "lastStatus": status})
                     updated += 1
         else:
-            all_tests = S.q("SELECT id, data FROM nodes WHERE label='SysTest'")
+            all_tests = S.q("SELECT id, props FROM nodes WHERE label='SysTest'")
             for row in all_tests:
                 d = json.loads(row[1]) if isinstance(row[1], str) else row[1]
                 file_ = d.get("file", "")
@@ -3059,7 +3068,7 @@ def cmd_run_history(args, root, S):
     if package:
         pkg_ids = [package]
     else:
-        rows = S.q("SELECT id, data FROM nodes WHERE label='SysTestPackage'")
+        rows = S.q("SELECT id, props FROM nodes WHERE label='SysTestPackage'")
         pkg_ids = []
         for r in rows:
             d = json.loads(r[1]) if isinstance(r[1], str) else r[1]
@@ -3149,7 +3158,7 @@ def cmd_test_status(args, root, S):
     days     = getattr(args, "days",     7) or 7
     instance = getattr(args, "instance", "") or ""
 
-    pkg_rows = S.q("SELECT id, data FROM nodes WHERE label='SysTestPackage'")
+    pkg_rows = S.q("SELECT id, props FROM nodes WHERE label='SysTestPackage'")
     packages = []
     for r in pkg_rows:
         d = json.loads(r[1]) if isinstance(r[1], str) else r[1]
@@ -3182,7 +3191,7 @@ def cmd_test_status(args, root, S):
                   f"{p.get('lastPassed') or 0}✓{skip_s}{xf_s} {p.get('lastFailed') or 0}✗{dur}")
 
     cutoff    = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    all_tests = S.q("SELECT data FROM nodes WHERE label='SysTest'")
+    all_tests = S.q("SELECT props FROM nodes WHERE label='SysTest'")
     never_run = 0
     stale     = 0
     for r in all_tests:
@@ -3210,9 +3219,9 @@ def cmd_impact(args, root, S):
 
     if path:
         test_rows = S.q(
-            "SELECT n.id, n.data, e.to_id FROM nodes n "
+            "SELECT n.id, n.props, e.to_id FROM nodes n "
             "JOIN edges e ON e.from_label='SysTest' AND e.from_id=n.id AND e.rtype='VERIFIES' "
-            "WHERE n.label='SysTest' AND n.data LIKE ?",
+            "WHERE n.label='SysTest' AND n.props LIKE ?",
             f"%{path}%")
         feat_map: dict = {}
         for r in test_rows:
@@ -3329,7 +3338,7 @@ def cmd_scan_tests(args, root, S):
 
     valid_ids: set = set()
     for label in ("SysFeature", "SysUserStory", "SysUseCase"):
-        for row in S.q("SELECT id FROM nodes WHERE label=?", label):
+        for row in S.q("SELECT id FROM nodes WHERE label=?", (label,)):
             valid_ids.add(row[0])
 
     suffix = file_path.suffix.lower()
@@ -3453,7 +3462,7 @@ def _sqlite_build_coverage_subject(S, us_id: str, uc_id: str) -> dict | None:
 
 def _sqlite_fetch_as_req_standards(S) -> list[dict]:
     rows = S.q(
-        "SELECT id, data FROM nodes WHERE label='SysArchStd' AND id LIKE 'AS-REQ-%' ORDER BY id")
+        "SELECT id, props FROM nodes WHERE label='SysArchStd' AND id LIKE 'AS-REQ-%' ORDER BY id")
     stds = []
     for r in rows:
         d = json.loads(r[1]) if isinstance(r[1], str) else r[1]
@@ -3638,8 +3647,8 @@ def cmd_coverage_review(args, root, S):
             subjects.append(sub)
     elif inst:
         uc_rows = S.q(
-            "SELECT id, data FROM nodes WHERE label='SysUseCase' "
-            "AND json_extract(data,'$.instance')=?", inst)
+            "SELECT id, props FROM nodes WHERE label='SysUseCase' "
+            "AND json_extract(props,'$.instance')=?", (inst,))
         story_ids_seen: set[str] = set()
         for r in uc_rows:
             for (sl, sid) in S.in_ids("SysUseCase", r[0], "REALIZED_BY"):
@@ -3706,7 +3715,7 @@ def cmd_quality_review(args, root, S):
     if not entity_id and not instance:
         raise CommandError("ERROR: provide --entity or --instance")
 
-    stds_rows = S.q("SELECT id, data FROM nodes WHERE label='SysArchStd' ORDER BY id")
+    stds_rows = S.q("SELECT id, props FROM nodes WHERE label='SysArchStd' ORDER BY id")
     stds = []
     for r in stds_rows:
         d = json.loads(r[1]) if isinstance(r[1], str) else r[1]
@@ -3723,7 +3732,7 @@ def cmd_quality_review(args, root, S):
     else:
         labels = [type_filter] if type_filter else ["SysUseCase", "SysUserStory"]
         for lbl in labels:
-            for row in S.q("SELECT id, data FROM nodes WHERE label=?", lbl):
+            for row in S.q("SELECT id, props FROM nodes WHERE label=?", (lbl,)):
                 d = json.loads(row[1]) if isinstance(row[1], str) else row[1]
                 if instance and d.get("instance") != instance:
                     continue
@@ -3792,7 +3801,7 @@ def cmd_audit_status(args, root, S):
     print(f"{'═' * W}\n")
 
     def _show(label: str, scope_name: str):
-        rows = S.q("SELECT id, data FROM nodes WHERE label=? ORDER BY id", label)
+        rows = S.q("SELECT id, props FROM nodes WHERE label=? ORDER BY id", (label,))
         items = []
         for r in rows:
             d = json.loads(r[1]) if isinstance(r[1], str) else r[1]
@@ -3822,8 +3831,8 @@ def cmd_audit_status(args, root, S):
 # ── Phase 5 — audit-test ─────────────────────────────────────────────────────
 
 def _sqlite_fetch_audit_test_standards(S, tier_prefix: str) -> list[dict]:
-    rows = S.q("SELECT id, data FROM nodes WHERE label='SysArchStd' AND id LIKE ? ORDER BY id",
-               f"{tier_prefix}%")
+    rows = S.q("SELECT id, props FROM nodes WHERE label='SysArchStd' AND id LIKE ? ORDER BY id",
+               (f"{tier_prefix}%",))
     return [{"id": r[0], **(json.loads(r[1]) if isinstance(r[1], str) else r[1])} for r in rows]
 
 
@@ -4087,7 +4096,7 @@ def cmd_session_close(args, root, S):
 
     def _count(label, closed_statuses):
         total = 0
-        for r in S.q("SELECT data FROM nodes WHERE label=?", label):
+        for r in S.q("SELECT props FROM nodes WHERE label=?", (label,)):
             d = json.loads(r[0]) if isinstance(r[0], str) else r[0]
             if instance and d.get("instance") != instance:
                 continue
@@ -4197,7 +4206,7 @@ def _sqlite_baseline_snapshot(S, instance: str, module: str) -> dict:
 
     for (label, key) in (("SysUserStory", "stories"), ("SysUseCase", "usecases"),
                           ("SysFeature", "features"), ("SysTest", "tests")):
-        for row in S.q("SELECT id, data FROM nodes WHERE label=?", label):
+        for row in S.q("SELECT id, props FROM nodes WHERE label=?", (label,)):
             d = json.loads(row[1]) if isinstance(row[1], str) else row[1]
             if instance and label == "SysUseCase" and d.get("instance") != instance:
                 continue
@@ -4246,7 +4255,7 @@ def cmd_baseline(args, root, S):
         return json.loads(text)
 
     if args.action == "list":
-        rows = S.q("SELECT id, data FROM nodes WHERE label='SysBaseline' ORDER BY id")
+        rows = S.q("SELECT id, props FROM nodes WHERE label='SysBaseline' ORDER BY id")
         if not rows:
             print("  No baselines yet — create one with: baseline create --name R1.0")
             return
@@ -6086,9 +6095,6 @@ _HANDLERS = {
     "prune-stale-tests": cmd_prune_stale_tests,
     "link-endpoint": cmd_link_endpoint,
     "reset": cmd_reset,
-    "mcp": cmd_mcp,
-    "register-mcp": cmd_register_mcp,
-    "open-viz": cmd_open_viz,
     # Phase 7 — scenario model
     "expire-note": cmd_expire_note, "scenarios": cmd_scenarios,
     "link-chapter": cmd_link_chapter, "link-scenario-story": cmd_link_scenario_story,

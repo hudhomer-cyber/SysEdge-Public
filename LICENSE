@@ -44,51 +44,14 @@ Any licence notice or attribution required by the Licence must also include
 this Commons Clause Licence Condition notice.
 
 Licensor: OrgEdge
-Software: SysEdge Community CLI (as defined in "Scope" below)
+Software: SysEdge
 Licence: MIT License (above)
-
----
-
-Scope: what this licence covers
-
-This licence (MIT + Commons Clause, i.e. source-available, not OSI open source)
-covers the SysEdge Community CLI only:
-
-  - cli/sys_edge.py: the core CLI, EXCLUDING the Kit features listed below
-  - cli/sys_edge_health.py, cli/sys_edge_reset.sh, cli/conftest_sysedge.py
-  - the core skills: skills/claude/C-sysedge-feature-graph/,
-    skills/claude/C-sysedge-init/, skills/kimi/K-sysedge-feature-graph/,
-    skills/kimi/K-sysedge-init/
-  - README.md, INSTALL.md, INSTANCES.md, QUICK-START.md and
-    examples/seed-example.json
-
-The following SysEdge Bootstrap Kit components are NOT covered by this
-licence. They are licensed only under the SysEdge Bootstrap Kit End User
-Licence Agreement (LICENCE-BOOTSTRAP-KIT.md):
-
-  - the premium features in cli/sys_edge.py, and the code implementing them:
-      - export (all types)
-      - preview-import / commit-import
-      - the AI audits: audit-test, coverage-review, quality-review --ai
-      - analyse, merge-nodes, seed-standards, create-adr
-      - compliance features: baselines, signed traceability exports, ReqIF
-  - cli/licence.py and cli/sys_edge_viz.py (the visualiser)
-  - all other files under skills/
-  - amygdala/
-  - setup.py, setup/docker-compose.yml, setup/.env.template
-  - examples/arch-standards.yaml (the standards library)
-  - patterns/ and session-templates/
-  - LICENCE-BOOTSTRAP-KIT.md, the Kit QUICK-START.md and sys-edge-briefing.md
-
-Where a Kit component and the Community CLI share a file, the EULA governs the
-Kit portions.
 
 ---
 
 Plain English summary (not legally binding):
 
-You may use, modify, and share this software freely for your own projects,
-including commercial software development. You may not sell this software
-itself — as a product, SaaS, hosted service, or consulting offering whose
-value comes primarily from this software — without a commercial licence from
-OrgEdge (sysedge@org-edge.com).
+You may use, modify, and share SysEdge freely for your own projects, including
+commercial software development. You may not sell SysEdge itself — as a product,
+SaaS, hosted service, or consulting offering whose value comes primarily from
+SysEdge — without a commercial licence from OrgEdge (sysedge@org-edge.com).

@@ -17,7 +17,7 @@ Scan the project source and register `SysSymbol` nodes under their owning `SysMo
 
 ## Prerequisites
 
-- `python3 cli/sys_edge.py init` has been run and the project is seeded with modules (ideally with `codePaths`).
+- `python3 scripts/sys_edge.py init` has been run and the project is seeded with modules (ideally with `codePaths`).
 
 **Connection settings** are read from the environment or from `.env` in the project root: `SYSEDGE_NEO4J_URI` (default `bolt://localhost:7688`), `SYSEDGE_NEO4J_USER` and `SYSEDGE_NEO4J_PASSWORD` (required). The legacy `NEO4J_*` names still work but print a deprecation notice; `NEO4J_AUTH` is never read. `SYSEDGE_PROJECT_ROOT` overrides the project root and `SYSEDGE_REPO` the repository id stamped on test paths.
 
@@ -26,16 +26,16 @@ Scan the project source and register `SysSymbol` nodes under their owning `SysMo
 
 ```bash
 # Discover project roots (go.mod, package.json, pyproject.toml, ...) or module codePaths and list them
-python3 cli/sys_edge.py scan-code --all
+python3 scripts/sys_edge.py scan-code --all
 
 # Scan everything discovered, without prompting
-python3 cli/sys_edge.py scan-code --all --yes
+python3 scripts/sys_edge.py scan-code --all --yes
 
 # Scan one module's registered codePaths
-python3 cli/sys_edge.py scan-code --module MOD-billing
+python3 scripts/sys_edge.py scan-code --module MOD-billing
 
 # Scan one file or directory; restrict the language
-python3 cli/sys_edge.py scan-code --path src/billing --lang go
+python3 scripts/sys_edge.py scan-code --path src/billing --lang go
 ```
 
 ## What it does
@@ -47,8 +47,8 @@ python3 cli/sys_edge.py scan-code --path src/billing --lang go
 It does **not** create `IMPLEMENTS` edges to features. Link the symbols that implement a feature explicitly:
 
 ```bash
-python3 cli/sys_edge.py link-symbol --feature F-BIL-001 --file src/billing/handlers.go --symbol CreateInvoice
-python3 cli/sys_edge.py link-endpoint --feature F-BIL-001 --method POST --path /api/invoices --binary api
+python3 scripts/sys_edge.py link-symbol --feature F-BIL-001 --file src/billing/handlers.go --symbol CreateInvoice
+python3 scripts/sys_edge.py link-endpoint --feature F-BIL-001 --method POST --path /api/invoices --binary api
 ```
 
 ## Output

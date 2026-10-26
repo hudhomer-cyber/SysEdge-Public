@@ -105,7 +105,6 @@ Use `full-inventory` before planning sessions or when you need to understand whe
 | Exit code | Meaning | Action |
 |---|---|---|
 | `0` | Success | Continue |
-| `1` | Command error (`sys_edge.py`), or warnings found (`sys_edge_health.py`) | Read the message. Health warnings are normal: continue and prioritise them |
 | `2` | Graph database unavailable (unreachable, authentication failed, or password not set) | Stop — see below |
 
 **If a command prints `⚠  Graph database unavailable` (exit code 2):** tell the user "The SysEdge graph database is unavailable — please start it and let me know when it's up", then stop. Do not investigate Docker, the network or the credentials; the `{{GRAPH_ROLE}}` role owns that.
@@ -144,7 +143,6 @@ Use `full-inventory` before planning sessions or when you need to understand whe
 {{CLI}} scenarios                                  # scenarios and training programmes
 {{CLI}} test-status  --instance <name>             # last test runs
 {{CLI}} audit-status --instance <name> --days 30   # audit-test / coverage-review staleness
-python3 {{CLI_DIR}}/sys_edge_health.py --instance <name>   # structural health check (exit 1 = warnings)
 ```
 
 ### Update existing nodes
@@ -381,7 +379,7 @@ Run the tests in this order after every change. **Do not close an enhancement or
    ```bash
    {{CLI}} record-run --package tests/billing --passed N --failed N --skipped N --duration N
    ```
-7. **Audit test quality** before closing ([Kit]): `{{CLI}} audit-test --uc UC-BIL-001`.
+7. **Audit test quality** before closing (): `{{CLI}} audit-test --uc UC-BIL-001`.
 {{/product}}
 
 ---
@@ -389,7 +387,6 @@ Run the tests in this order after every change. **Do not close an enhancement or
 ## Before claiming work complete
 
 ```bash
-python3 {{CLI_DIR}}/sys_edge_health.py --instance <your-instance>   # coverage gaps, stale links, missing edges
 ```
 
 - [ ] Every applicable test tier ran in this session, and `record-run` recorded the final run
@@ -423,5 +420,4 @@ Look up module ids with `{{CLI}} status` and `{{CLI}} briefing --instance <name>
 ## Visualiser{{#product}} —{{/product}}
 
 ```bash
-python3 {{CLI_DIR}}/sys_edge_viz.py   # http://localhost:8888
 ```

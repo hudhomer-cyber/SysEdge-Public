@@ -3017,7 +3017,6 @@ def cmd_test_status(args):
 def _default_arch_standards_path() -> Path | None:
     """Return the path to the bundled arch-standards.yaml, or None if not found."""
     candidates = [
-        # Kit layout: cli/sys_edge.py sits next to examples/
         Path(__file__).parent / "examples" / "arch-standards.yaml",
         # Source layout: scripts/sys_edge.py -> ../tools/sysedge/examples/
         Path(__file__).parent.parent / "tools" / "sysedge" / "examples" / "arch-standards.yaml",
@@ -3047,7 +3046,7 @@ def cmd_seed_standards(args):
     if not path:
         print("ERROR: No standards file specified and bundled arch-standards.yaml not found.",
               file=sys.stderr)
-        print("       Run: python3 cli/sys_edge.py seed-standards <path/to/arch-standards.yaml>",
+        print("       Run: python3 scripts/sys_edge.py seed-standards <path/to/arch-standards.yaml>",
               file=sys.stderr)
         sys.exit(1)
     if not path.exists():
@@ -3982,7 +3981,7 @@ def _emit_ai_analysis_request(args, file_tests: list, inst_filter: str):
 
     print("\n  Next step: run the analysis in your AI session, save the result JSON,")
     print("  then apply it with:")
-    print(f"    python3 cli/sys_edge.py scan-tests --apply-ai-results <result.json>")
+    print(f"    python3 scripts/sys_edge.py scan-tests --apply-ai-results <result.json>")
 
 
 def _apply_ai_results(path: str) -> int:
@@ -6595,7 +6594,6 @@ def cmd_health_report(args):
         print(f"  ⚠ no backup files found in data/")
 
     print(f"\n{'═' * W}")
-    print(f"  Run sys_edge_health.py for the full per-category detail report")
     print(f"{'═' * W}")
 
 
@@ -9836,7 +9834,7 @@ def _emit_coverage_review_request(args, subjects: list[dict], standards: list[di
 
     print("\n  Next step: run the analysis in your AI session, save the result JSON,")
     print("  then apply it with:")
-    print(f"    python3 cli/sys_edge.py coverage-review --apply-results <result.json>")
+    print(f"    python3 scripts/sys_edge.py coverage-review --apply-results <result.json>")
 
 
 def _apply_coverage_review_results(path: str, file_proposals: bool = False):
@@ -10576,7 +10574,7 @@ def _emit_audit_test_request(args, subjects: list[dict], standards: list[dict]):
 
     print("\n  Next step: run the analysis in your AI session, save the result JSON,")
     print("  then apply it with:")
-    print(f"    python3 cli/sys_edge.py audit-test --apply-results <result.json>")
+    print(f"    python3 scripts/sys_edge.py audit-test --apply-results <result.json>")
 
 
 def _apply_audit_test_results(path: str):
@@ -13782,10 +13780,10 @@ def cmd_status(args):
 # Grouping for the top-level --help. Commands not listed here appear under
 # OTHER, so the help can never silently omit a command.
 # Commands that never touch the graph database (work on any backend)
-_BACKEND_NEUTRAL = {"mcp", "register-mcp", "config"}
+_BACKEND_NEUTRAL = {"config"}
 
 _HELP_GROUPS = [
-    ("SETUP & DATA", ["init", "config", "register-mcp", "mcp", "seed", "backup", "reset", "seed-standards"]),
+    ("SETUP & DATA", ["init", "config", "seed", "backup", "reset", "seed-standards"]),
     ("SESSION START", ["briefing", "worklog", "status", "test-gaps", "health-report"]),
     ("WORK ITEMS", ["create-enhancement", "start-enhancement", "close-enhancement",
                     "abandon-enhancement", "show-enhancement", "update-enhancement",
@@ -13802,7 +13800,7 @@ _HELP_GROUPS = [
                               "coverage-review", "quality-review", "preview-import",
                               "commit-import", "create-adr", "baseline", "trace-matrix",
                               "reqif"]),
-    ("NOTES & FEEDBACK", ["add-note", "show-notes", "session-close", "open-viz"]),
+    ("NOTES & FEEDBACK", ["add-note", "show-notes", "session-close"]),
 ]
 
 
@@ -13819,7 +13817,7 @@ def _grouped_help(subparsers_action) -> str:
         lines.append(f"  {title}")
         for c in rows:
             seen.add(c)
-            tag = "[Kit] " if c in PREMIUM_COMMANDS else ""
+            tag = "" if c in PREMIUM_COMMANDS else ""
             lines.append(f"    {c:<20} {tag}{helps[c]}")
         lines.append("")
     lines.append("Exit codes: 0 ok · 1 error · 2 database unreachable / not configured · 3 not licensed")
@@ -14610,9 +14608,6 @@ Run: python3 scripts/sys_edge.py <cmd> --help
     sp.add_argument("--prefix",   default="US-REQIF", help="import: id prefix for new stories")
     sp.add_argument("--apply",    action="store_true", help="import: write (default is a dry run)")
 
-    sub.add_parser("mcp", help="Run as an MCP server on stdio (briefing, worklog, claims, search… as tools)")
-    sub.add_parser("register-mcp", help="Add the SysEdge MCP server to this project's .mcp.json")
-
     sp = sub.add_parser("config", help="Show or set project settings (sysedge.yaml), e.g. model lightweight|full")
     sp.add_argument("action", choices=["get", "set"])
     sp.add_argument("key", nargs="?", default="")
@@ -14638,10 +14633,6 @@ Run: python3 scripts/sys_edge.py <cmd> --help
     sp = sub.add_parser("session-close", help="Composite end-of-session: health check + worklog summary + backup")
     sp.add_argument("--instance",  default="", help="Instance name for work summary (optional)")
     sp.add_argument("--no-backup", action="store_true", dest="no_backup", help="Skip the backup step")
-
-    sp = sub.add_parser("open-viz", help="Show the visualiser launch path and how to start it [Kit]")
-    sp.add_argument("--port", type=int, default=8888, help="Port (default 8888)")
-    sp.add_argument("--launch", action="store_true", help="Also start the server in the background")
 
     sp = sub.add_parser("add-standard", help="Add a project-specific SysArchStd node (tier=project)")
     sp.add_argument("--id",           required=True, help="Standard ID, e.g. AS-TEST-WIZ-001")
@@ -14790,15 +14781,25 @@ Run: python3 scripts/sys_edge.py <cmd> --help
     # Zero-Docker backend: SYSEDGE_BACKEND=sqlite or `backend: sqlite` in
     # sysedge.yaml routes the supported commands to sys_edge_sqlite.py.
     backend = (os.environ.get("SYSEDGE_BACKEND")
-               or str(_project_config().get("backend", "neo4j"))).strip().lower()
+               or str(_project_config().get("backend", "sqlite"))).strip().lower()
+    if backend == "neo4j":
+        print(
+            "✗ The Neo4j backend requires a commercial licence.\n"
+            "  SysEdge Community Edition includes the SQLite backend (set backend: sqlite\n"
+            "  in sysedge.yaml, or omit it — SQLite is the default).\n"
+            "  For team/enterprise deployments with Neo4j, contact: hudhomer@gmail.com",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     if backend == "sqlite" and args.cmd not in _BACKEND_NEUTRAL:
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import sys_edge_sqlite
         if args.cmd in sys_edge_sqlite.SUPPORTED:
             sys_edge_sqlite.run(args.cmd, args, _root)
             return
-        print(f"✗ {args.cmd} needs the Neo4j backend (the SQLite backend supports: "
-              f"{', '.join(sorted(sys_edge_sqlite.SUPPORTED))})", file=sys.stderr)
+        print(f"✗ {args.cmd} is not supported in the SQLite backend. "
+              f"Supported commands: {', '.join(sorted(sys_edge_sqlite.SUPPORTED))}",
+              file=sys.stderr)
         sys.exit(1)
 
     def _dispatch_scan_tests(a):
@@ -14967,8 +14968,6 @@ Run: python3 scripts/sys_edge.py <cmd> --help
         "check-test-links":    cmd_check_test_links,
         "reset":               cmd_reset,
         "config":              cmd_config,
-        "mcp":                 cmd_mcp,
-        "register-mcp":        cmd_register_mcp,
         "changes":             cmd_changes,
         "set-external-ref":    cmd_set_external_ref,
         "baseline":            cmd_baseline,
@@ -14992,7 +14991,6 @@ Run: python3 scripts/sys_edge.py <cmd> --help
         "seed-standards": cmd_seed_standards,
         "health-report":      cmd_health_report,
         "session-close":      cmd_session_close,
-        "open-viz":           cmd_open_viz,
         "link-commit":        cmd_link_commit,
         "show-blockers":      cmd_show_blockers,
         "impact":             cmd_impact,

@@ -82,7 +82,7 @@ orphan: US-LEGACY-001        # retained for audit trail, will not be linked
 
 ### Step 1 — Parse arguments
 
-Extract `--instance`, `--types` (subset of `features,use-cases,stories`), `--merge-threshold`, `--max-responsibilities` and `--ignore-file` from the user's message. If the user names an instance you don't recognise, list the instances with `python3 cli/sys_edge.py status` and ask.
+Extract `--instance`, `--types` (subset of `features,use-cases,stories`), `--merge-threshold`, `--max-responsibilities` and `--ignore-file` from the user's message. If the user names an instance you don't recognise, list the instances with `python3 scripts/sys_edge.py status` and ask.
 
 ### Step 2 — Read the ignore file
 
@@ -97,9 +97,9 @@ Parse the lines into `ignored_merges` (id pairs), `ignored_splits` and `ignored_
 All three accept `--instance <name>` (omit it for the whole graph) and `--json`:
 
 ```bash
-python3 cli/sys_edge.py analyse --merge --threshold 0.5 --json > /tmp/sysedge-merge.json
-python3 cli/sys_edge.py analyse --split --max-responsibilities 3 --json > /tmp/sysedge-split.json
-python3 cli/sys_edge.py analyse --orphans --json > /tmp/sysedge-orphans.json
+python3 scripts/sys_edge.py analyse --merge --threshold 0.5 --json > /tmp/sysedge-merge.json
+python3 scripts/sys_edge.py analyse --split --max-responsibilities 3 --json > /tmp/sysedge-split.json
+python3 scripts/sys_edge.py analyse --orphans --json > /tmp/sysedge-orphans.json
 ```
 
 JSON shape (each run fills its own key; the others stay empty):
@@ -151,7 +151,7 @@ Drop ids in `ignored_orphans`; apply `--types` (stories → `Stories without UC`
 - Recommendation: keep F-BIL-001 (more links), absorb F-BIL-004
 
 ```bash
-python3 cli/sys_edge.py merge-nodes --type SysFeature --keep F-BIL-001 --absorb F-BIL-004 --strategy union
+python3 scripts/sys_edge.py merge-nodes --type SysFeature --keep F-BIL-001 --absorb F-BIL-004 --strategy union
 ```
 
 ## Split Candidates
@@ -161,10 +161,10 @@ python3 cli/sys_edge.py merge-nodes --type SysFeature --keep F-BIL-001 --absorb 
 - Cluster B, *Manage user permissions*: UC-UA-004, UC-UA-005, UC-UA-006
 
 ```bash
-python3 cli/sys_edge.py create-feature --id F-UA-IDN --name "Manage user identity" --module MOD-auth
-python3 cli/sys_edge.py create-feature --id F-UA-ACC --name "Manage user permissions" --module MOD-auth
-python3 cli/sys_edge.py link-usecase --id UC-UA-004 --feature F-UA-ACC
-python3 cli/sys_edge.py unlink-usecase --id UC-UA-004 --feature F-USER-ADMIN
+python3 scripts/sys_edge.py create-feature --id F-UA-IDN --name "Manage user identity" --module MOD-auth
+python3 scripts/sys_edge.py create-feature --id F-UA-ACC --name "Manage user permissions" --module MOD-auth
+python3 scripts/sys_edge.py link-usecase --id UC-UA-004 --feature F-UA-ACC
+python3 scripts/sys_edge.py unlink-usecase --id UC-UA-004 --feature F-USER-ADMIN
 ```
 
 ## Orphan Nodes
@@ -185,9 +185,9 @@ python3 cli/sys_edge.py unlink-usecase --id UC-UA-004 --feature F-USER-ADMIN
 Ask which findings to act on or dismiss. Before showing a merge as ready to run, **check the instance of both nodes**:
 
 ```bash
-python3 cli/sys_edge.py show-usecase --id UC-A     # prints [instance]
-python3 cli/sys_edge.py show-story   --id US-A     # prints [instance] when set
-python3 cli/sys_edge.py show-feature --id F-A      # prints the owning Module; compare the modules' instances
+python3 scripts/sys_edge.py show-usecase --id UC-A     # prints [instance]
+python3 scripts/sys_edge.py show-story   --id US-A     # prints [instance] when set
+python3 scripts/sys_edge.py show-feature --id F-A      # prints the owning Module; compare the modules' instances
 ```
 
 If the instances differ (or a feature's modules belong to different instances), do not offer the merge: "Cross-instance merges are not allowed — both nodes must belong to the same instance. File an enhancement for the instance that owns them instead." If the instance cannot be determined, say so and let the user decide.
@@ -196,7 +196,7 @@ Then confirm:
 
 ```
 About to run:
-  python3 cli/sys_edge.py merge-nodes --type SysFeature --keep F-BIL-001 --absorb F-BIL-004 --strategy union
+  python3 scripts/sys_edge.py merge-nodes --type SysFeature --keep F-BIL-001 --absorb F-BIL-004 --strategy union
 This transfers every edge from F-BIL-004 to F-BIL-001 and deletes F-BIL-004.
 Strategy union merges list properties (prefer-keep / prefer-absorb choose scalar values).
 Confirm? [yes/no]

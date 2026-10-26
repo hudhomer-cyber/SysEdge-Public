@@ -27,7 +27,7 @@ Parse a user-story document, write a `sysedge.import.v1` file, preview it with `
 ## Step 1 — Parse the invocation
 
 - `<path>` — required. If missing, ask: "Please provide a path to the user story document."
-- `--instance <name>` — the instance that will own the stories. To see the project's instances, run `python3 cli/sys_edge.py status`.
+- `--instance <name>` — the instance that will own the stories. To see the project's instances, run `python3 scripts/sys_edge.py status`.
 - `--link-features` — keep feature references, so `commit-import` adds `REQUIRES` edges to existing features.
 - `--dry-run` — run everything up to and including `preview-import`, but do not commit.
 
@@ -67,7 +67,7 @@ Write `/tmp/sysedge-import-stories-<timestamp>.json` (`<timestamp>` from `date +
 ```
 
 Field rules:
-- `id_hint` — **always set it**; without it the CLI invents `US-IMPORT-NNN`. Use the document's id if it has one, else `US-<AREA>-NNN`. Check that a new id is free: `python3 cli/sys_edge.py show-story --id <id_hint>` must report "not found".
+- `id_hint` — **always set it**; without it the CLI invents `US-IMPORT-NNN`. Use the document's id if it has one, else `US-<AREA>-NNN`. Check that a new id is free: `python3 scripts/sys_edge.py show-story --id <id_hint>` must report "not found".
 - `title` — heading or first sentence, without the "As a …" preamble, at most 120 characters.
 - `actor`, `goal`, `benefit` — the "As a", "I want" and "so that" clauses (`benefit` may be `""`).
 - `narrative` — the canonical sentence; omit "so that" when there is no benefit.
@@ -94,7 +94,7 @@ Add a `warnings` entry for each finding; never drop a story silently.
 ## Step 5 — Preview
 
 ```bash
-python3 cli/sys_edge.py preview-import /tmp/sysedge-import-stories-<timestamp>.json
+python3 scripts/sys_edge.py preview-import /tmp/sysedge-import-stories-<timestamp>.json
 ```
 
 The CLI compares each entity with the graph, prints a table, and writes the decisions file next to the import file: **`/tmp/sysedge-import-stories-<timestamp>-decisions.json`**, a list of
@@ -126,7 +126,7 @@ Instance: billing        Source: /abs/path/stories.md
 | 4 | US-BIL-004 | Token refresh | — | 0 | 0.40 | low-conf | skip | low-confidence, missing-actor |
 ```
 
-If the instance is unresolved, say so prominently and list the instances from `python3 cli/sys_edge.py status`.
+If the instance is unresolved, say so prominently and list the instances from `python3 scripts/sys_edge.py status`.
 
 ## Step 6 — Confirm
 
@@ -150,7 +150,7 @@ Ask once: `Proceed with import? [y = commit / e = edit / n = abort]`
 Resolve every `review` with the user (`create`, `merge-into` or `skip`). Edit the decisions file with your file-editing tool; do not write a script. Then:
 
 ```bash
-python3 cli/sys_edge.py commit-import /tmp/sysedge-import-stories-<timestamp>.json \
+python3 scripts/sys_edge.py commit-import /tmp/sysedge-import-stories-<timestamp>.json \
   --decisions /tmp/sysedge-import-stories-<timestamp>-decisions.json
 ```
 
@@ -161,11 +161,11 @@ The CLI prints one `✓ <id>` line per story and `committed=… skipped=… fail
 For each committed story with acceptance criteria:
 
 ```bash
-python3 cli/sys_edge.py update-story --id US-BIL-001 \
+python3 scripts/sys_edge.py update-story --id US-BIL-001 \
   --acceptance-criteria "Given a paid invoice, when I click Download, then a PDF opens"
 ```
 
-(Separate several criteria with "; ".) Link stories to features found after the import with `python3 cli/sys_edge.py link-story --story US-BIL-002 --features F-BIL-003`, and to use cases with `python3 cli/sys_edge.py link-usecase --id UC-BIL-001 --story US-BIL-002`.
+(Separate several criteria with "; ".) Link stories to features found after the import with `python3 scripts/sys_edge.py link-story --story US-BIL-002 --features F-BIL-003`, and to use cases with `python3 scripts/sys_edge.py link-usecase --id UC-BIL-001 --story US-BIL-002`.
 
 Summarise:
 
@@ -178,7 +178,7 @@ Skipped for review: US-BIL-003 (near-duplicate of US-007)
 Next steps:
 - Add acceptance criteria to US-BIL-002 (update-story --acceptance-criteria)
 - Compare US-BIL-003 with US-007 (`/C-sysedge-analyse-graph --types stories`)
-- Check the instance view: python3 cli/sys_edge.py briefing --instance billing
+- Check the instance view: python3 scripts/sys_edge.py briefing --instance billing
 ```
 
 ---

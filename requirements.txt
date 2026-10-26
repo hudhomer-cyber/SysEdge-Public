@@ -2,6 +2,5 @@
 # Install from the repo root:  python3 -m pip install -r requirements.txt
 # Compatible-release pins: patch/minor updates allowed, no major-version jumps.
 neo4j~=5.28            # Bolt driver (Neo4j 5.x server)
-python-dotenv~=1.2     # loads .env beside cli/
-PyYAML~=6.0            # seed-standards, amygdala rules
-cryptography>=42,<51   # Kit licence signature check (Ed25519); harmless in the free CLI
+python-dotenv~=1.2     # loads .env beside scripts/
+PyYAML~=6.0            # seed-standards

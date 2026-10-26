@@ -4,8 +4,8 @@
 # Full V-model: user stories, use cases and all four test tiers
 model: full
 
-# Instances for this repo
-instances: [sys-edge]
+# Instances for this repo — replace with your project's instance names
+instances: [myapp]
 
 # Zero-Docker backend: sqlite (default) or neo4j
 backend: sqlite

@@ -40,7 +40,7 @@ Default output: `docs/exports/{type}-{scope}-{YYYY-MM-DD}.md`, where `{scope}` i
 | `test-summary` | Test counts by package and tier | `--instance` (matched against the test package's area) |
 | `detailed-design` | The full traceability design: design by module (feature → use case → story with tests), traceability matrix, coverage gaps, test-link integrity, orphan nodes | `--instance`, `--module` |
 
-`detailed-design` is the only type that lists orphans (section 5) and test-link problems (section 4, repair with `python3 cli/sys_edge.py check-test-links --fix`).
+`detailed-design` is the only type that lists orphans (section 5) and test-link problems (section 4, repair with `python3 scripts/sys_edge.py check-test-links --fix`).
 
 `--module` scopes only `stories` and `detailed-design`, and takes precedence over `--instance` there. For the other types it changes only the default file name, so scope them with `--instance` and leave `--module` out.
 
@@ -50,7 +50,7 @@ Default output: `docs/exports/{type}-{scope}-{YYYY-MM-DD}.md`, where `{scope}` i
 
 ### Step 1 — Parse arguments
 
-Extract `--type` (required — ask if missing), `--instance`, `--module`, `--output` and `--format` from the user's message. If an instance or module name is unknown, list instances with `python3 cli/sys_edge.py status` or a module's features with `python3 cli/sys_edge.py features --module <id>`, and ask.
+Extract `--type` (required — ask if missing), `--instance`, `--module`, `--output` and `--format` from the user's message. If an instance or module name is unknown, list instances with `python3 scripts/sys_edge.py status` or a module's features with `python3 scripts/sys_edge.py features --module <id>`, and ask.
 
 ### Step 2 — Compute the output path and check it
 
@@ -66,7 +66,7 @@ On "no", suggest a new path (e.g. add `-v2`) and use it with `--output`.
 ### Step 3 — Run the export
 
 ```bash
-python3 cli/sys_edge.py export --type <type> [--instance <inst>] [--module <module-id>] \
+python3 scripts/sys_edge.py export --type <type> [--instance <inst>] [--module <module-id>] \
   --output <final path> --format md
 ```
 
@@ -91,7 +91,7 @@ For `detailed-design` the CLI prints counts (modules, features, use cases, stori
 **User:** `/K-sysedge-export --type stories --instance billing`
 
 ```bash
-python3 cli/sys_edge.py export --type stories --instance billing \
+python3 scripts/sys_edge.py export --type stories --instance billing \
   --output docs/exports/stories-billing-2026-05-22.md --format md
 ```
 
@@ -102,7 +102,7 @@ python3 cli/sys_edge.py export --type stories --instance billing \
 **User:** `/K-sysedge-export --type detailed-design --instance billing`
 
 ```bash
-python3 cli/sys_edge.py export --type detailed-design --instance billing \
+python3 scripts/sys_edge.py export --type detailed-design --instance billing \
   --output docs/exports/detailed-design-billing-2026-05-22.md --format md
 ```
 

@@ -27,7 +27,7 @@ Parse a use-case document, write a `sysedge.import.v1` file, preview it with `pr
 ## Step 1 — Parse the invocation
 
 - `<path>` — required. If missing, ask: "Please provide a path to the use case document."
-- `--instance <name>` — the instance that will own the use cases. To see the project's instances, run `python3 cli/sys_edge.py status`.
+- `--instance <name>` — the instance that will own the use cases. To see the project's instances, run `python3 scripts/sys_edge.py status`.
 - `--link-stories` — keep story references, so `commit-import` adds `REALIZED_BY` edges from existing stories.
 - `--link-features` — keep feature references, so `commit-import` adds `REQUIRES` edges to existing features.
 - `--dry-run` — run everything up to and including `preview-import`, but do not commit.
@@ -82,7 +82,7 @@ Write `/tmp/sysedge-import-use-cases-<timestamp>.json` (`<timestamp>` from `date
 ```
 
 Field rules:
-- `id_hint` — **always set it**; it becomes the node id (without it the CLI invents `UC-IMPORT-NNN`). Use the document's `UC-` id if present, else `UC-<AREA>-NNN`. Check that a new id is free: `python3 cli/sys_edge.py show-usecase --id <id_hint>` must report "not found".
+- `id_hint` — **always set it**; it becomes the node id (without it the CLI invents `UC-IMPORT-NNN`). Use the document's `UC-` id if present, else `UC-<AREA>-NNN`. Check that a new id is free: `python3 scripts/sys_edge.py show-usecase --id <id_hint>` must report "not found".
 - `name` — a lowercase, hyphenated slug (`issue-invoice`). `preview-import` treats a use case with the same `name` in the same instance as a duplicate.
 - `title` — at most 120 characters. `description` — one to three sentences.
 - `priority` — `P0–P3`; omit if absent (the CLI defaults to `P1`).
@@ -109,7 +109,7 @@ Add a `warnings` entry for each finding; never drop a section silently.
 ## Step 6 — Preview
 
 ```bash
-python3 cli/sys_edge.py preview-import /tmp/sysedge-import-use-cases-<timestamp>.json
+python3 scripts/sys_edge.py preview-import /tmp/sysedge-import-use-cases-<timestamp>.json
 ```
 
 The CLI prints a table and writes **`/tmp/sysedge-import-use-cases-<timestamp>-decisions.json`**, a list of `{"ref", "action", "status", "match_id", "entity"}` entries:
@@ -135,7 +135,7 @@ Instance: billing      ADR sections skipped: 1      Story sections skipped: 0
 | 3 | UC-BIL-003 | dunning | Overdue reminder | 0 / 0 | 0.30 | low-conf | skip | missing-main-flow |
 ```
 
-If the instance is unresolved, say so prominently and list the instances from `python3 cli/sys_edge.py status`.
+If the instance is unresolved, say so prominently and list the instances from `python3 scripts/sys_edge.py status`.
 
 ## Step 7 — Confirm, settle decisions, commit
 
@@ -148,7 +148,7 @@ Ask once: `Proceed with import? [y = commit / e = edit / n = abort]`
 For use cases, `commit-import` writes only `create` entries; any other action is counted as skipped. Set each entry to `create` or `skip` (resolve every ambiguous one with the user) using your file-editing tool. To change an existing use case instead, `skip` it here and use `update-usecase` / `link-usecase` in Step 8.
 
 ```bash
-python3 cli/sys_edge.py commit-import /tmp/sysedge-import-use-cases-<timestamp>.json \
+python3 scripts/sys_edge.py commit-import /tmp/sysedge-import-use-cases-<timestamp>.json \
   --decisions /tmp/sysedge-import-use-cases-<timestamp>-decisions.json
 ```
 
@@ -159,7 +159,7 @@ python3 cli/sys_edge.py commit-import /tmp/sysedge-import-use-cases-<timestamp>.
 For each committed use case, add the flows and the fields `coverage-review` reads (lists joined into one string; number the steps):
 
 ```bash
-python3 cli/sys_edge.py update-usecase --id UC-BIL-001 \
+python3 scripts/sys_edge.py update-usecase --id UC-BIL-001 \
   --preconditions "Clerk is signed in with billing:write; the order is complete" \
   --main-flow "1. Clerk opens the order. 2. Clerk chooses Issue invoice. 3. System creates the invoice and emails it." \
   --postconditions "The invoice exists with status Sent." \
@@ -167,7 +167,7 @@ python3 cli/sys_edge.py update-usecase --id UC-BIL-001 \
   --failure-scenarios "Order not complete; email bounces; 3a. no email: postal delivery"
 ```
 
-Put alternate flows in `--main-flow` (after the main steps) or `--failure-scenarios`. Add links found later with `python3 cli/sys_edge.py link-usecase --id UC-BIL-001 --feature F-BIL-002 --story US-BIL-003`.
+Put alternate flows in `--main-flow` (after the main steps) or `--failure-scenarios`. Add links found later with `python3 scripts/sys_edge.py link-usecase --id UC-BIL-001 --feature F-BIL-002 --story US-BIL-003`.
 
 Summarise:
 
@@ -179,7 +179,7 @@ Skipped: UC-BIL-002 (ambiguous — user chose skip), UC-BIL-003 (no main flow)
 
 Next steps:
 - Add a main flow to UC-BIL-003 in the document and re-import it
-- Link use cases to features: python3 cli/sys_edge.py link-usecase --id UC-BIL-001 --feature F-BIL-001
+- Link use cases to features: python3 scripts/sys_edge.py link-usecase --id UC-BIL-001 --feature F-BIL-001
 - Check for duplicates: /K-sysedge-analyse-graph --types use-cases
 ```
 

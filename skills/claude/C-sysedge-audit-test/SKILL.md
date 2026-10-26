@@ -33,16 +33,16 @@ SysEdge builds the request from the graph, this Claude session runs the analysis
 
 ```bash
 # 0. Optional: check which test file will be used (auto-discovered from the graph)
-python3 cli/sys_edge.py audit-test --uc UC-BIL-001 --preflight
+python3 scripts/sys_edge.py audit-test --uc UC-BIL-001 --preflight
 
 # 1. Emit the request
-python3 cli/sys_edge.py audit-test --uc UC-BIL-001 --analyse --output-request /tmp/audit-req.json
+python3 scripts/sys_edge.py audit-test --uc UC-BIL-001 --analyse --output-request /tmp/audit-req.json
 
 # 2. In this Claude session: read /tmp/audit-req.json, audit the test against each standard,
 #    and save JSON matching the request's responseFormat to /tmp/audit-res.json
 
 # 3. Apply the result
-python3 cli/sys_edge.py audit-test --apply-results /tmp/audit-res.json
+python3 scripts/sys_edge.py audit-test --apply-results /tmp/audit-res.json
 ```
 
 Override the auto-discovered file with `--file <path>`; override the tier with `--tier usecase|integration|e2e`.
@@ -52,10 +52,10 @@ Override the auto-discovered file with `--file <path>`; override the tier with `
 The command calls an AI provider itself (see "AI modes and data egress").
 
 ```bash
-python3 cli/sys_edge.py audit-test --uc UC-BIL-001
-python3 cli/sys_edge.py audit-test --ucs UC-BIL-001,UC-BIL-002 --model haiku      # batch; exits 1 if any FAIL
-python3 cli/sys_edge.py audit-test --feature F-BIL-001 --file tests/billing/test_invoices.py
-python3 cli/sys_edge.py audit-test --us US-012 --provider claude
+python3 scripts/sys_edge.py audit-test --uc UC-BIL-001
+python3 scripts/sys_edge.py audit-test --ucs UC-BIL-001,UC-BIL-002 --model haiku      # batch; exits 1 if any FAIL
+python3 scripts/sys_edge.py audit-test --feature F-BIL-001 --file tests/billing/test_invoices.py
+python3 scripts/sys_edge.py audit-test --us US-012 --provider claude
 ```
 
 ## AI modes and data egress
@@ -105,4 +105,4 @@ PASS / WARN / FAIL per standard, with an action for each WARN or FAIL, and an ov
 
 ## Next steps
 
-Fix the failing items and re-run. Record the test run with `python3 cli/sys_edge.py record-run --package <path> --passed N --failed N`, and check staleness with `python3 cli/sys_edge.py audit-status --instance <name>`.
+Fix the failing items and re-run. Record the test run with `python3 scripts/sys_edge.py record-run --package <path> --passed N --failed N`, and check staleness with `python3 scripts/sys_edge.py audit-status --instance <name>`.

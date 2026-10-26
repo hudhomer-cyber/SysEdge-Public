@@ -24,12 +24,12 @@ Evaluate an entity (`SysUserStory`, `SysUseCase`, `SysFeature` or `SysModule`) a
 
 ```bash
 # Automated checks for one entity, or for every use case of an instance
-python3 cli/sys_edge.py quality-review --entity UC-BIL-001
-python3 cli/sys_edge.py quality-review --instance billing --type SysUseCase
+python3 scripts/sys_edge.py quality-review --entity UC-BIL-001
+python3 scripts/sys_edge.py quality-review --instance billing --type SysUseCase
 
 # Add the AI-evaluated standards (Kit); --model haiku|sonnet, --provider restricts the provider
-python3 cli/sys_edge.py quality-review --entity US-012 --ai
-python3 cli/sys_edge.py quality-review --entity F-BIL-001 --ai --provider claude
+python3 scripts/sys_edge.py quality-review --entity US-012 --ai
+python3 scripts/sys_edge.py quality-review --entity F-BIL-001 --ai --provider claude
 ```
 
 ## AI modes and data egress

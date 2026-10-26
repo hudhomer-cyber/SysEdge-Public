@@ -4,7 +4,7 @@
 
 When multiple AI agent sessions work on the same codebase simultaneously, they burn tokens re-reading source files, duplicate each other's work, and leave coverage gaps no one notices. SysEdge gives every session a shared, live graph of what exists, what's tested, and what's pending — updated by the sessions themselves as they work.
 
-Everything is open source (MIT). No licence key, no paid tier, no Docker required.
+Free to use and modify (MIT + Commons Clause). No licence key, no paid tier, no Docker required.
 
 ---
 
@@ -129,6 +129,31 @@ python3 scripts/sys_edge.py deliver-brief --enh ENH-007
 
 `deliver-brief` reads the enhancement, its linked features, use cases, stories, open defects, and all module context notes, then emits a structured JSON brief and agent instructions in one shot. The `/deliver` skill forks an agent with this brief so the main session stays clean.
 
+### Agent feedback to the architect
+
+Delivery agents communicate back through the graph, not through a direct channel. When an agent discovers something while implementing — a hidden constraint, a race condition, an ambiguous use case — it writes to the graph:
+
+```bash
+# Agent files a defect it found mid-implementation
+python3 scripts/sys_edge.py create-defect \
+  --title "Token refresh races under concurrent load" \
+  --severity high --feature F-AUTH-003
+
+# Agent records a constraint it learned
+python3 scripts/sys_edge.py add-module-context --module M-001 \
+  --kind constraint --text "all writes must go through the repository layer — direct DB access bypasses audit trail"
+
+# Agent flags a concern for the architect
+python3 scripts/sys_edge.py add-module-context --module M-001 \
+  --kind concern --text "UC-AUTH-004 preconditions conflict with the rate-limiter — needs clarification before DEF-045 can close"
+
+# Agent attaches a note to an open enhancement
+python3 scripts/sys_edge.py add-note --instance auth \
+  --body "ENH-014 depends on the session store refactor in ENH-009 — blocked until that closes"
+```
+
+The architect reads these at the start of the next session via `briefing`, `show-module-context`, and `worklog`. The graph is the shared bus — no direct agent-to-agent channel is needed, and the observations persist across sessions rather than being lost in terminal scrollback.
+
 ---
 
 ## Skills
@@ -215,13 +240,17 @@ See [INSTANCES.md](INSTANCES.md) for naming conventions, scope templates, and an
 
 ## Backends
 
-| | SQLite (default) | Neo4j (optional) |
+| | SQLite — Community Edition | Neo4j — Commercial |
 |---|---|---|
-| Needs | Nothing — Python stdlib | A running Neo4j server |
-| Best for | Single machine, local dev, CI | Teams sharing a central graph |
-| Select | `backend: sqlite` in `sysedge.yaml` | `backend: neo4j` + env vars |
+| Licence | MIT + Commons Clause (free) | Commercial licence required |
+| Needs | Nothing — Python stdlib only | A running Neo4j server |
+| Best for | Individual devs, small teams, CI | Teams sharing a central graph |
+| Shared use | Shared network drive (WAL mode) | Native concurrent access |
+| Select | `backend: sqlite` (default) | Contact for licence |
 
-Moving between them: `backup` on one backend → `seed <file>` on the other. Or `export-neo4j` to generate an idempotent Cypher script.
+SQLite is the default and requires no configuration beyond `sysedge.yaml`. For team deployments with Neo4j, contact hudhomer@gmail.com.
+
+Migrating from Neo4j to SQLite: `export-neo4j --output graph.cypher` then `seed <backup-file>`. Or `backup` on one backend → `seed <file>` on the other.
 
 ---
 
@@ -245,4 +274,4 @@ Moving between them: `backup` on one backend → `seed <file>` on the other. Or 
 
 ---
 
-MIT · Built at [OrgEdge](https://www.org-edge.com) · [sysedge@org-edge.com](mailto:sysedge@org-edge.com)
+MIT + Commons Clause · Built at [OrgEdge](https://www.org-edge.com) · [sysedge@org-edge.com](mailto:sysedge@org-edge.com)
