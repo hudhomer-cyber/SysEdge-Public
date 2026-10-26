@@ -1,0 +1,94 @@
+MIT License with Commons Clause
+
+Copyright (c) 2026 OrgEdge
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+Commons Clause
+
+"Commons Clause" License Condition v1.0
+
+The Software is provided to you by the Licensor under the Licence, as defined
+below, subject to the following condition.
+
+Without limiting other conditions in the Licence, the grant of rights under
+the Licence does not include, and the Licence does not grant to you, the right
+to Sell the Software.
+
+For purposes of the foregoing, "Sell" means practising any or all of the
+rights granted to you under the Licence to provide to third parties, for a
+fee or other consideration (including without limitation fees for hosting or
+consulting / support services related to the Software), a product or service
+whose value derives, entirely or substantially, from the functionality of the
+Software.
+
+Any licence notice or attribution required by the Licence must also include
+this Commons Clause Licence Condition notice.
+
+Licensor: OrgEdge
+Software: SysEdge Community CLI (as defined in "Scope" below)
+Licence: MIT License (above)
+
+---
+
+Scope: what this licence covers
+
+This licence (MIT + Commons Clause, i.e. source-available, not OSI open source)
+covers the SysEdge Community CLI only:
+
+  - cli/sys_edge.py: the core CLI, EXCLUDING the Kit features listed below
+  - cli/sys_edge_health.py, cli/sys_edge_reset.sh, cli/conftest_sysedge.py
+  - the core skills: skills/claude/C-sysedge-feature-graph/,
+    skills/claude/C-sysedge-init/, skills/kimi/K-sysedge-feature-graph/,
+    skills/kimi/K-sysedge-init/
+  - README.md, INSTALL.md, INSTANCES.md, QUICK-START.md and
+    examples/seed-example.json
+
+The following SysEdge Bootstrap Kit components are NOT covered by this
+licence. They are licensed only under the SysEdge Bootstrap Kit End User
+Licence Agreement (LICENCE-BOOTSTRAP-KIT.md):
+
+  - the premium features in cli/sys_edge.py, and the code implementing them:
+      - export (all types)
+      - preview-import / commit-import
+      - the AI audits: audit-test, coverage-review, quality-review --ai
+      - analyse, merge-nodes, seed-standards, create-adr
+      - compliance features: baselines, signed traceability exports, ReqIF
+  - cli/licence.py and cli/sys_edge_viz.py (the visualiser)
+  - all other files under skills/
+  - amygdala/
+  - setup.py, setup/docker-compose.yml, setup/.env.template
+  - examples/arch-standards.yaml (the standards library)
+  - patterns/ and session-templates/
+  - LICENCE-BOOTSTRAP-KIT.md, the Kit QUICK-START.md and sys-edge-briefing.md
+
+Where a Kit component and the Community CLI share a file, the EULA governs the
+Kit portions.
+
+---
+
+Plain English summary (not legally binding):
+
+You may use, modify, and share this software freely for your own projects,
+including commercial software development. You may not sell this software
+itself — as a product, SaaS, hosted service, or consulting offering whose
+value comes primarily from this software — without a commercial licence from
+OrgEdge (sysedge@org-edge.com).

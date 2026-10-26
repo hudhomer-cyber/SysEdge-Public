@@ -1,0 +1,11 @@
+# SysEdge project settings for this repository (read by scripts/sys_edge.py).
+# See _project_config() in scripts/sys_edge.py.
+
+# Full V-model: user stories, use cases and all four test tiers
+model: full
+
+# Instances for this repo
+instances: [sys-edge]
+
+# Zero-Docker backend: sqlite (default) or neo4j
+backend: sqlite

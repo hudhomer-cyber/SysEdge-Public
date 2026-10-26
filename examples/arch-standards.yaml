@@ -1,0 +1,637 @@
+# SysEdge Architecture Standards — seed file
+# Load with: python3 cli/sys_edge.py seed-standards arch-standards.yaml
+#
+# These are the architecture and quality standards across 6 domains that
+# SysEdge uses for architecture auditing and requirements/test adequacy.
+# Customise for your project — add, remove, or adjust compliance notes to
+# match your stack. The quality domain seeds the AS-REQ/AS-TEST dimensions
+# used by coverage-review and audit-test.
+#
+# Sources: 12-factor (12f), OWASP, NIST CSF, Google SRE, cloud-native (cn)
+
+# addressed_by: lists the IDs of SysArchDecision (ADR-NNN) or SysArchStd (ARCH-*)
+# nodes that address this standard. seed-standards creates ADDRESSES edges
+# automatically. Leave empty ([]) until you have made a decision.
+
+execution:
+  - id: EXEC-S01
+    name: Stateless backend services
+    type: standard
+    source: 12-factor
+    rationale: Stateless services scale horizontally; auth context carried in requests.
+    complianceNote: No in-memory session state in handlers.
+    addressed_by: [ADR-024]
+
+  - id: EXEC-S02
+    name: Request correlation IDs
+    type: standard
+    source: 12-factor
+    rationale: Per-request trace IDs correlate logs across services.
+    complianceNote: X-Request-ID propagated; included in every log record.
+    addressed_by: [ADR-028]
+
+  - id: EXEC-S03
+    name: Graceful shutdown with request drain
+    type: standard
+    source: 12-factor
+    rationale: Complete in-flight requests before exiting on SIGTERM.
+    complianceNote: Signal handler with drain timeout in each service binary.
+    addressed_by: [ADR-029]
+
+  - id: EXEC-S04
+    name: Async pattern for long-running operations
+    type: standard
+    source: internal
+    rationale: Synchronous long ops risk timeouts and duplicate requests.
+    complianceNote: Fire-and-forget with job ID polling for ops >5s.
+    addressed_by: [ARCH-AI-002]
+
+  - id: EXEC-S05
+    name: Database connection pooling
+    type: standard
+    source: internal
+    rationale: Per-request connection creation exhausts database limits.
+    complianceNote: Single driver/pool, session-per-request.
+    addressed_by: [ADR-030]
+
+  - id: EXEC-BP01
+    name: Horizontal scalability — no sticky sessions
+    type: best-practice
+    source: 12-factor
+    addressed_by: [ADR-024]
+
+  - id: EXEC-BP02
+    name: Circuit breaker for external service calls
+    type: best-practice
+    source: microservices
+    addressed_by: []
+
+  - id: EXEC-BP03
+    name: Idempotent write operations
+    type: best-practice
+    source: microservices
+    addressed_by: [ARCH-MERGE-001]
+
+development:
+  - id: DEV-S01
+    name: Explicit permission check on all API endpoints
+    type: standard
+    source: owasp
+    rationale: Missing permission checks are the most common privilege escalation vector.
+    complianceNote: Every route has explicit permission/role check — no open endpoints.
+    addressed_by: [ARCH-AUTH-003]
+
+  - id: DEV-S02
+    name: Parameterised database queries — no string interpolation
+    type: standard
+    source: owasp
+    rationale: String interpolation creates injection vectors.
+    complianceNote: No fmt.Sprintf/string concat in query building.
+    addressed_by: [ARCH-NEO-001]
+
+  - id: DEV-S03
+    name: Module isolation — no cross-module code imports
+    type: standard
+    source: clean-architecture
+    rationale: Cross-module imports create tight coupling.
+    addressed_by: [ADR-003, ADR-019, ARCH-PICK-001]
+
+  - id: DEV-S04
+    name: All user-facing strings use i18n keys
+    type: standard
+    source: internal
+    addressed_by: []
+
+  - id: DEV-S05
+    name: Standardised error shape across all endpoints
+    type: standard
+    source: internal
+    addressed_by: [ARCH-ERR-001]
+
+  - id: DEV-S06
+    name: V-model test coverage — component, integration, usecase, e2e
+    type: standard
+    source: v-model
+    rationale: Each specification artefact has a corresponding verification artefact.
+    addressed_by: [ADR-027]
+
+  - id: DEV-BP01
+    name: Code maps kept current with exported surface
+    type: best-practice
+    source: internal
+    addressed_by: []
+
+  - id: DEV-BP02
+    name: Schema/model changes go via config or YAML, not code
+    type: principle
+    source: internal
+    addressed_by: [ADR-005]
+
+  - id: DEV-BP03
+    name: Accept imperfect data — recommend, do not block
+    type: principle
+    source: internal
+    addressed_by: [ADR-025]
+
+operations:
+  - id: OPS-S01
+    name: Health endpoint on every service binary
+    type: standard
+    source: sre
+    complianceNote: GET /health returns 200 + JSON on all service processes.
+    addressed_by: [ADR-031]
+
+  - id: OPS-S02
+    name: Structured JSON logging with request ID and user context
+    type: standard
+    source: sre
+    addressed_by: [ARCH-LOG-001]
+
+  - id: OPS-S03
+    name: Metrics for request count, latency, and error rate
+    type: standard
+    source: sre
+    addressed_by: []
+
+  - id: OPS-S04
+    name: Zero-downtime deployment
+    type: standard
+    source: sre
+    addressed_by: []
+
+  - id: OPS-BP01
+    name: Log level discipline (INFO/DEBUG/WARN/ERROR)
+    type: best-practice
+    source: sre
+    addressed_by: []
+
+  - id: OPS-BP02
+    name: Health endpoints include dependency checks
+    type: best-practice
+    source: sre
+    addressed_by: []
+
+  - id: OPS-BP03
+    name: Runbooks for Sev-1 incidents
+    type: best-practice
+    source: sre
+    addressed_by: []
+
+  - id: OPS-BP04
+    name: SLO-based alerting
+    type: best-practice
+    source: sre
+    addressed_by: []
+
+security:
+  - id: SEC-S01
+    name: Authentication required on all endpoints
+    type: standard
+    source: owasp
+    rationale: All API routes require authentication. Fail-closed on error.
+    addressed_by: [ARCH-AUTH-001, ARCH-AUTH-003, ADR-015]
+
+  - id: SEC-S02
+    name: Data scoped to authenticated user (fail-closed)
+    type: standard
+    source: owasp
+    rationale: Users only see data they are authorised for. On scope error — empty, not all.
+    addressed_by: [ARCH-AUTH-002]
+
+  - id: SEC-S03
+    name: Secrets in environment variables only
+    type: standard
+    source: 12-factor
+    addressed_by: [ADR-026, ADR-035, ARCH-AI-001]
+
+  - id: SEC-S04
+    name: Admin functions on isolated surface
+    type: standard
+    source: internal
+    addressed_by: [ADR-017]
+
+  - id: SEC-S05
+    name: Inter-service calls authenticated
+    type: standard
+    source: internal
+    addressed_by: [ARCH-AI-001]
+
+  - id: SEC-S06
+    name: Input validation at all system boundaries
+    type: standard
+    source: owasp
+    addressed_by: [ARCH-NEO-001]
+
+  - id: SEC-BP01
+    name: Principle of least privilege for all roles
+    type: best-practice
+    source: nist
+    addressed_by: [ADR-018]
+
+  - id: SEC-BP02
+    name: Audit log for all write operations
+    type: best-practice
+    source: nist
+    addressed_by: []
+
+  - id: SEC-BP03
+    name: Rate limiting on authentication endpoints
+    type: best-practice
+    source: owasp
+    addressed_by: []
+
+  - id: SEC-BP04
+    name: OWASP Top 10 review before major releases
+    type: best-practice
+    source: owasp
+    addressed_by: []
+
+infrastructure:
+  - id: INFRA-S01
+    name: All services containerised
+    type: standard
+    source: cloud-native
+    addressed_by: [ADR-003]
+
+  - id: INFRA-S02
+    name: Single ingress point (reverse proxy)
+    type: standard
+    source: cloud-native
+    addressed_by: [ADR-020]
+
+  - id: INFRA-S03
+    name: TLS terminates at gateway; internal HTTP only
+    type: standard
+    source: cloud-native
+    addressed_by: [ADR-032]
+
+  - id: INFRA-S04
+    name: Persistent data on named volumes
+    type: standard
+    source: cloud-native
+    addressed_by: [ADR-033]
+
+  - id: INFRA-BP01
+    name: Container images pinned to specific versions
+    type: best-practice
+    source: cloud-native
+    addressed_by: []
+
+  - id: INFRA-BP02
+    name: Network segmentation — backend on internal network
+    type: best-practice
+    source: cloud-native
+    addressed_by: []
+
+  - id: INFRA-BP03
+    name: Secrets injected at runtime, not baked into images
+    type: best-practice
+    source: 12-factor
+    addressed_by: [ADR-035]
+
+  - id: INFRA-BP04
+    name: Infrastructure as code — all config in version control
+    type: best-practice
+    source: cloud-native
+    addressed_by: [ADR-034]
+
+quality:
+  # Requirements adequacy dimensions used by coverage-review (AS-REQ)
+  - id: AS-REQ-001
+    title: "Requirements: Actor Completeness"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase, SysUserStory]
+    description: |
+      PRACTITIONER GUIDANCE (not a confirmed formal standard — requirements quality literature is 79% improvement-focused per NIH PMC9110500). Can the primary actor named in the user story achieve their stated goal through the set of defined UCs? Every step of the actor journey must be covered by at least one UC. Gaps in the journey are omission faults in the UC set — the story claims capability the UCs do not deliver.
+    addressed_by: []
+
+  - id: AS-REQ-002
+    title: "Requirements: Authorization Boundaries"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase, SysUserStory]
+    description: |
+      PRACTITIONER GUIDANCE. Is it explicit in each UC which roles can perform it and which cannot? Could an instance engineer derive the correct CASL permission string from the UC description alone, without reading the code? If the permission boundary is ambiguous or absent, the UC cannot generate a correct role-visibility test.
+    addressed_by: []
+
+  - id: AS-REQ-003
+    title: "Requirements: Exception Coverage"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase, SysUserStory]
+    description: |
+      PRACTITIONER GUIDANCE, backed by error-path coverage finding (confirmed 3-0 by adversarial research review). Do the UCs describe behaviour for all reachable failure states? Required cases: rejection by the target (e.g. delegate rejects), resource expiry, authority-overflow (sub-delegation beyond granted bound), graph returning partial results on timeout or partial failure, and licence validation failure. An unspecified failure state is an omission fault — the system will exhibit undefined behaviour when it occurs. Basis: Error path coverage (OneUptime 2026; Sapegin; Playwright docs); omission-fault principle (Zhu et al. 1997).
+    addressed_by: []
+
+  - id: AS-REQ-004
+    title: "Requirements: Ontology Alignment"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase, SysUserStory]
+    description: |
+      PRACTITIONER GUIDANCE. Do the UCs name the correct entities, relationships, and attributes as defined in the ontology YAML? Could an instance engineer write the correct Neo4j Cypher from the UC alone? Incorrect entity names or relationship directions in a UC will propagate into incorrect tests that test the wrong thing.
+    addressed_by: []
+
+  - id: AS-REQ-005
+    title: "Requirements: Testability"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase, SysUserStory]
+    description: |
+      PRACTITIONER GUIDANCE. Are acceptance criteria specific enough to derive a test assertion? The test: replace the acceptance criterion with expect(page).to_have_text(X) or assert response.json()[field] == Y. If this substitution produces a vacuous assertion (user sees a good result), the criterion is not testable and must be made concrete before tests are written. Basis: INVEST T (Testable) criterion — practitioner guidance, not confirmed to primary-source quality by adversarial research.
+    addressed_by: []
+
+  - id: AS-REQ-006
+    title: "Requirements: Scope Definition"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase, SysUserStory]
+    description: |
+      PRACTITIONER GUIDANCE. Is what the story explicitly does NOT cover stated? Out-of-scope cases must be clear enough that an instance will not accidentally implement them, and clear enough that a test can assert their absence.
+    addressed_by: []
+
+  - id: AS-REQ-007
+    title: "Requirements: Bidirectional Traceability with Execution"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase, SysUserStory]
+    description: |
+      Each UC must link backward to its parent US via REALIZED_BY and forward to its implementing tests via VERIFIES on SysTest nodes. Both directions must be populated. Additionally, test execution results must be recorded via record-run — a UC with forward links to unrun tests has structural traceability but zero coverage assurance. This is not a quality-of-life concern: ISO/IEC/IEEE 29148:2018 mandates bidirectional traceability with execution status for any system claiming requirements coverage. Basis: ISO/IEC/IEEE 29148:2018; ISTQB Foundation Level v4; safety-critical standards ISO 26262, IEC 62304, DO-178C (confirmed 3-0 by adversarial research review).
+    addressed_by: []
+
+  # Component / integration test dimensions used by audit-test --tier integration (AS-TEST-COMP)
+  - id: AS-TEST-COMP-001
+    title: "Component Test: Endpoint Contract"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      Every endpoint registered in the sys_graph via link-endpoint for this feature must have at least one integration test at that exact method and path combination. Endpoints in the graph with no corresponding test are specification-based omission faults at the API tier. Basis: Omission-fault principle applied to registered endpoints.
+    addressed_by: []
+
+  - id: AS-TEST-COMP-002
+    title: "Component Test: Auth Boundary"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      Each protected endpoint must be tested with: (a) no authentication token — assert 401; (b) a valid token for an excluded role — assert 403. These are mandatory specification-based tests derived from the ARCH-AUTH-003 standard (every handler that returns org-scoped data must use RequirePermission). Absence of either test leaves the auth invariant unverified. Basis: ARCH-AUTH-003 (this system auth standard); omission-fault principle.
+    addressed_by: []
+
+  - id: AS-TEST-COMP-003
+    title: "Component Test: Input Validation"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      For each input accepted by the endpoint, three equivalence partition tests are required: (a) valid representative value — confirms acceptance; (b) boundary value at the ontology or API constraint — confirms the edge is correctly handled; (c) invalid type or format — confirms a structured error response is returned, not a 500. All three partitions must derive from the endpoint specification or ontology constraint, not from code inspection. Basis: IEEE ISSRE doi:10.1109/637166 (BVA/EP effectiveness); Toronto CSC410.
+    addressed_by: []
+
+  - id: AS-TEST-COMP-004
+    title: "Component Test: State Transitions"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      Create, update, and delete operations must be verified by re-reading state after the operation — not by asserting only the response body. A test that calls POST and checks the 201 response without a subsequent GET confirming the created state has not verified persistence. Basis: Specification-based testing of post-conditions.
+    addressed_by: []
+
+  - id: AS-TEST-COMP-005
+    title: "Component Test: Error Response Shape"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      Error responses must be asserted to return structured JSON matching the documented error format, not bare exception text or a raw 500. The test must intercept at least one error condition per endpoint and assert the response shape. Basis: Error path coverage finding (confirmed 3-0 by adversarial research review); OneUptime 2026; Sapegin Modern React testing.
+    addressed_by: []
+
+  - id: AS-TEST-COMP-006
+    title: "Component Test: Graph-Specific Error States"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      For every feature backed by a Neo4j query, the following states are mandatory integration-tier test cases: (a) empty graph result — 0 nodes returned — assert the empty state response shape; (b) cross-tenant isolation — assert org A cannot read org B data through this endpoint (paired positive/negative assertion). These are omission faults specific to the graph-backed architecture that happy-path-only tests will never detect. Basis: Error path coverage finding applied to graph-backed systems; isolation requirement derived from ARCH-AUTH-003 and security principles.
+    addressed_by: []
+
+  # Use-case test dimensions used by audit-test --tier usecase (AS-TEST-UC)
+  - id: AS-TEST-UC-001
+    title: "UC Test: Element Inventory"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      Every data-testid element referenced in the UC main flow, alternative flows, and accepted state must be asserted present and accessible in at least one test in the expected state. Elements are identified from the UC specification and the feature endpoint/symbol graph links — not from code inspection. If an element exists in the implementation but is absent from the UC specification, that is a specification gap to fix first. This is an application of the omission-fault principle: tests derived from code cannot detect features that were never specified. Basis: Zhu, Hall & May, ACM Computing Surveys 1997; Toronto CSC410 slides.
+    addressed_by: []
+
+  - id: AS-TEST-UC-002
+    title: "UC Test: Role Visibility"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      The UC specification must declare which roles can perform the UC and which are excluded. For each permitted role: assert the feature is accessible and the primary action is available. For each excluded role: assert the correct denied state — a hidden control, an empty state with appropriate messaging, or a redirect — not an unhandled error. Both directions are mandatory specification-based tests: an omission in either direction means the permission boundary is untested. Note: no confirmed industry standard prescribes RBAC test structure; this standard is grounded in the omission-fault principle applied to role specifications. Basis: Finding 1 (omission faults, Zhu et al. 1997) applied to role-based specifications.
+    addressed_by: []
+
+  - id: AS-TEST-UC-003
+    title: "UC Test: Happy Path"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      The UC main success scenario must run end-to-end in at least one test, with the final state asserted — not just the page load. The test must exercise the sequence of actions described in the UC main flow and assert the output state described in the UC post-condition or accepted state. A test that navigates to a page and stops without completing the flow does not satisfy this dimension. Basis: Specification-based testing theory; ISTQB Foundation Level system test tier.
+    addressed_by: []
+
+  - id: AS-TEST-UC-004
+    title: "UC Test: Validation and Error Paths"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      Error path coverage is mandatory, not optional (confirmed 3-0 by adversarial research review). For each test in this dimension, apply equivalence partitioning and boundary value analysis explicitly from the specification: (a) a valid representative value — confirms the happy path accepts it; (b) a boundary value at the ontology constraint — the minimum or maximum the spec permits; (c) an invalid value — wrong type, out of range, or constraint violation. Additionally: each API error response (4xx, 5xx) must be intercepted and the resulting user-visible feedback asserted. Silence on error is a failure. Empty graph results (0 nodes returned) are a mandatory error-path case for graph-backed features. Basis: IEEE ISSRE doi:10.1109/637166 (BVA effectiveness); OneUptime 2026; Sapegin Modern React testing pt 5; Toronto CSC410.
+    addressed_by: []
+
+  - id: AS-TEST-UC-005
+    title: "UC Test: Equivalence Partition and Boundary Cases"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      Partition the UC input space into equivalence classes from the specification — not from code. Each class needs one representative test. Boundary values must come from ontology constraints or UC preconditions — not from developer intuition. Graph-specific boundaries that must be covered: zero nodes returned (empty state), exactly one node (single-item rendering), and the pagination boundary (maximum page size). These are specification-derived boundaries for the graph backend. Basis: IEEE ISSRE doi:10.1109/637166; omission-fault principle applied to graph-backed systems.
+    addressed_by: []
+
+  - id: AS-TEST-UC-006
+    title: "UC Test: Semantic Correctness"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      Labels, headings, error messages, confirmation text, and terminology visible in the UI must be asserted by their exact visible content — not by element presence alone and not by CSS class. Use page.get_by_text() or .text_content() assertions. Terminology must match the ontology: entity names, relationship labels, and enum values as defined in the ontology YAML. Internal identifiers (pos-, fn-, proc- prefixes), developer comments, TODO copy, and placeholder text must be asserted absent. This is not cosmetic — asserting exact text is a specification-based test for an omission fault when the ontology specifies the term. No IEEE/ISO standard addresses this; the standard is grounded in the Playwright user-visible-behavior principle combined with the omission-fault principle. Basis: playwright.dev/docs/best-practices (official); Zhu et al. omission-fault principle.
+    addressed_by: []
+
+  - id: AS-TEST-UC-007
+    title: "UC Test: Specification Derivation"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUseCase]
+    description: |
+      Every test class or test function must include a comment tracing it to a named element of the UC: a step number in the main flow, a named alternative flow, a precondition, or an acceptance criterion. Tests derived solely from code inspection are not specification-based and will not detect omission faults. This is the operationalisation of specification-based testing at the time of writing the test. Example comment: # UC-DLG-001 Main Flow step 3: delegate receives notification in My Inbox. Basis: Zhu, Hall & May, ACM Computing Surveys 1997 (foundational specification-based testing theory).
+    addressed_by: []
+
+  # E2E / user-story test dimensions used by audit-test --tier e2e (AS-TEST-US)
+  - id: AS-TEST-US-001
+    title: "US Test: Actor Journey"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUserStory]
+    description: |
+      The primary actor named in the user story title must complete their stated goal start-to-finish in a single continuous test run. The test must operate from the actor perspective — navigating as that role, using the tools that role has access to, without short-circuiting via admin or direct API calls. Basis: ISTQB acceptance test tier; specification-based testing from actor perspective.
+    addressed_by: []
+
+  - id: AS-TEST-US-002
+    title: "US Test: Benefit Observable"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUserStory]
+    description: |
+      The so-that clause of the user story must be demonstrable in the final state of the test. The test must assert that the outcome the actor cared about is present — not just that the last action succeeded. Example: so that I can track delegations means assert the delegation appears in the audit history view, not just that the API returned 200. Basis: Specification-based testing; INVEST Valuable criterion (practitioner guidance, not formally confirmed by adversarial research review).
+    addressed_by: []
+
+  - id: AS-TEST-US-003
+    title: "US Test: UC Composition"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUserStory]
+    description: |
+      All SysUseCase nodes linked via REALIZED_BY to the user story must be exercised in the E2E test. A US-to-test link without exercising all realising UCs leaves the story partially covered even if the structural link exists. Basis: Forward traceability requirement, ISO/IEC/IEEE 29148:2018.
+    addressed_by: []
+
+  - id: AS-TEST-US-004
+    title: "US Test: Scope Boundary"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUserStory]
+    description: |
+      Data, features, or actions explicitly stated as out-of-scope in the user story must be asserted absent or inaccessible for the primary actor. A test that never verifies out-of-scope exclusions leaves the boundary untested — and an untested boundary is an untested permission invariant. Basis: Omission-fault principle applied to scope definitions.
+    addressed_by: []
+
+  - id: AS-TEST-US-005
+    title: "US Test: Cross-Instance Handoff"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUserStory]
+    description: |
+      Where the user story spans multiple instances (for example a strategic decision distributing to a manager inbox), the integration point must be exercised end-to-end — not mocked or assumed. Each handoff point is a specification-derived test obligation for the integration between instances. Basis: Integration test error-path finding; specification-based testing applied to cross-instance flows.
+    addressed_by: []
+
+  - id: AS-TEST-US-006
+    title: "US Test: Traceability Execution Status"
+    type: guidance
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: ai
+    appliesToTypes: [SysUserStory]
+    description: |
+      After every test run, results must be recorded in the sys_graph via record-run. Failing tests must have a linked SysDefect created via link-defect. A user story with a VERIFIES edge to an unrun test has structural traceability but zero coverage assurance. Static links without execution data are explicitly insufficient under ISO/IEC/IEEE 29148:2018. Applicable to safety-critical systems under ISO 26262, IEC 62304, and DO-178C. Basis: ISO/IEC/IEEE 29148:2018; ISTQB Foundation Level v4; ISO 26262; IEC 62304, DO-178C.
+    addressed_by: []
+
+  - id: AS-DIR-001
+    title: "Module directories: code paths registered"
+    type: standard
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: automated
+    appliesToTypes: [SysModule]
+    description: |
+      Every SysModule must declare the code directories it owns in codePaths. scan-code and symbol discovery depend on these paths; without them the graph cannot map symbols to modules and coverage-review cannot verify traceability from code to features. If no codePaths are registered, scan-code --module must prompt for and persist them.
+    addressed_by: []
+
+  - id: AS-DIR-002
+    title: "Module directories: test paths registered"
+    type: standard
+    source: internal
+    tier: project
+    enforcement: mandatory
+    evaluation: automated
+    appliesToTypes: [SysModule]
+    description: |
+      Every SysModule must declare the test directories that verify it in testPaths. scan-tests and coverage-review depend on these paths to discover test packages and link tests to features. If no testPaths are registered, scan-tests --module must prompt for and persist them.
+    addressed_by: []
