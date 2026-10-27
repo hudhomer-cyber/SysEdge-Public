@@ -1,6 +1,6 @@
 """SysEdge SQLite backend — zero-Docker storage for the coordination and traceability loop.
 
-Implements the full SysEdge command set using SQLite (Python stdlib). No infrastructure required.
+Proposal P-06 (tools/sysedge/proposals/P-06-agent-agnostic-zero-docker.md), step c.
 
 The Neo4j CLI (scripts/sys_edge.py) parses the command line; when the SQLite
 backend is selected it hands the parsed argparse Namespace to this module:
@@ -3322,34 +3322,149 @@ def _scan_python_tests(file_path: str) -> list:
         return []
 
 
-def cmd_scan_tests(args, root, S):
-    path = getattr(args, "path", "") or ""
-    if not path:
-        raise CommandError("ERROR: --path is required for SQLite backend scan-tests")
+def _scan_ts_tests(file_path: str) -> list:
+    """Return test names from a TypeScript/JavaScript file (Jest/Vitest/Playwright/Mocha)."""
+    try:
+        with open(file_path, encoding="utf-8", errors="replace") as f:
+            source = f.read()
+        # it('name') / test('name') with optional .each/.skip/.only/.concurrent/.todo modifier
+        return re.findall(
+            r'\b(?:it|test)\s*(?:\.(?:each|skip|only|concurrent|todo|fails)\s*(?:\([^)]*\))?\s*)?\s*'
+            r'\(\s*[\'"`]([^\'"`\n]{1,200})[\'"`]',
+            source,
+        )
+    except Exception:
+        return []
 
-    file_path = Path(path)
-    if not file_path.is_absolute():
-        file_path = root / file_path
-    if not file_path.exists():
-        raise CommandError(f"ERROR: file not found: {file_path}")
 
-    pkg_id = str(path)
-    area   = file_path.stem
+def _scan_java_tests(file_path: str) -> list:
+    """Return @Test / @ParameterizedTest method names from a Java test file."""
+    try:
+        with open(file_path, encoding="utf-8", errors="replace") as f:
+            source = f.read()
+        return re.findall(
+            r'@(?:Test|ParameterizedTest|RepeatedTest|TestFactory)\b[\s\S]{0,200}?'
+            r'(?:public|protected|private|default)\s+\w[\w<>, ]*\s+(\w+)\s*\(',
+            source,
+        )
+    except Exception:
+        return []
 
-    valid_ids: set = set()
-    for label in ("SysFeature", "SysUserStory", "SysUseCase"):
-        for row in S.q("SELECT id FROM nodes WHERE label=?", (label,)):
-            valid_ids.add(row[0])
 
+def _scan_csharp_tests(file_path: str) -> list:
+    """Return test method names from a C# test file (xUnit/NUnit/MSTest)."""
+    try:
+        with open(file_path, encoding="utf-8", errors="replace") as f:
+            source = f.read()
+        return re.findall(
+            r'\[(?:Test|Fact|Theory|TestMethod|TestCase)\]'
+            r'(?:\s*\[[^\]]+\])*\s+public\s+\w[\w<>? ]*\s+(\w+)\s*\(',
+            source,
+        )
+    except Exception:
+        return []
+
+
+def _scan_ruby_tests(file_path: str) -> list:
+    """Return test names from a Ruby RSpec or MiniTest file."""
+    try:
+        with open(file_path, encoding="utf-8", errors="replace") as f:
+            source = f.read()
+        names = re.findall(r'\bit\s+[\'"]([^\'"]{1,200})[\'"]', source)
+        names += re.findall(r'\bdef\s+(test_\w+)', source)
+        return names
+    except Exception:
+        return []
+
+
+def _scan_rust_tests(file_path: str) -> list:
+    """Return #[test] function names from a Rust source file."""
+    try:
+        with open(file_path, encoding="utf-8", errors="replace") as f:
+            source = f.read()
+        return re.findall(r'#\[test\][\s\S]{0,100}?fn\s+(\w+)\s*\(', source)
+    except Exception:
+        return []
+
+
+_SCANNER_MAP = {
+    ".py":   _scan_python_tests,
+    ".ts":   _scan_ts_tests,
+    ".tsx":  _scan_ts_tests,
+    ".mts":  _scan_ts_tests,
+    ".js":   _scan_ts_tests,
+    ".jsx":  _scan_ts_tests,
+    ".mjs":  _scan_ts_tests,
+    ".java": _scan_java_tests,
+    ".cs":   _scan_csharp_tests,
+    ".rb":   _scan_ruby_tests,
+    ".rs":   _scan_rust_tests,
+}
+
+_SKIP_DIRS = frozenset({
+    "node_modules", ".git", "__pycache__", "vendor", "dist", "build",
+    ".next", "target", "coverage", ".turbo", "out", ".cache",
+})
+
+_TEST_GLOB_PATTERNS = [
+    "test_*.py", "*_test.py",
+    "*.spec.ts", "*.test.ts", "*.spec.tsx", "*.test.tsx",
+    "*.spec.mts", "*.test.mts",
+    "*.spec.js", "*.test.js", "*.spec.jsx", "*.test.jsx",
+    "*.spec.mjs", "*.test.mjs",
+    "*Test.java", "*Tests.java", "*Spec.java", "*IT.java",
+    "*Test.cs", "*Tests.cs", "*Spec.cs",
+    "*_spec.rb", "*_test.rb",
+]
+
+
+def _discover_test_files(root: Path) -> list:
+    """Discover test files under root using common naming patterns across all supported languages."""
+    seen = set()
+    found = []
+    for pattern in _TEST_GLOB_PATTERNS:
+        for f in root.rglob(pattern):
+            if f in seen:
+                continue
+            if any(part in _SKIP_DIRS for part in f.parts):
+                continue
+            seen.add(f)
+            found.append(f)
+    # Rust: .rs files containing #[test] (sampled — skip large generated files)
+    for f in root.rglob("*.rs"):
+        if f in seen:
+            continue
+        if any(part in _SKIP_DIRS for part in f.parts):
+            continue
+        try:
+            if f.stat().st_size > 500_000:
+                continue
+            if "#[test]" in f.read_text(encoding="utf-8", errors="replace"):
+                seen.add(f)
+                found.append(f)
+        except Exception:
+            pass
+    return sorted(found)
+
+
+def _scan_one_test_file(file_path: Path, root: Path, S, valid_ids: set) -> tuple:
+    """Scan a single test file and write results to the store. Returns (path_str, count, links)."""
     suffix = file_path.suffix.lower()
-    if suffix != ".py":
-        raise CommandError(f"SQLite scan-tests supports .py files only (got {suffix})")
+    scanner = _SCANNER_MAP.get(suffix)
+    if not scanner:
+        return (str(file_path), 0, 0)
 
-    fn_names = _scan_python_tests(str(file_path))
+    fn_names = scanner(str(file_path))
     if not fn_names:
-        print(f"  {pkg_id}: no test functions found")
-        return
+        return (str(file_path), 0, 0)
 
+    try:
+        rel = file_path.relative_to(root)
+        pkg_id = str(rel)
+    except ValueError:
+        pkg_id = str(file_path)
+
+    area = file_path.stem
     try:
         source = file_path.read_text(encoding="utf-8", errors="replace")
     except Exception:
@@ -3359,11 +3474,12 @@ def cmd_scan_tests(args, root, S):
     with S.write():
         S.upsert("SysTestPackage", pkg_id, {
             "path": pkg_id, "area": area, "canonicalRoot": "tests",
+            "lang": suffix.lstrip("."),
         })
         for fn in fn_names:
-            tid = f"{path}::{fn}"
+            tid = f"{pkg_id}::{fn}"
             S.upsert("SysTest", tid, {
-                "file": path, "fn": fn, "testType": "integration",
+                "file": pkg_id, "fn": fn, "testType": "integration",
                 "packageId": pkg_id,
             })
             S.link("SysTestPackage", pkg_id, "CONTAINS_TEST", "SysTest", tid)
@@ -3371,8 +3487,56 @@ def cmd_scan_tests(args, root, S):
                 if ref_id.startswith("F-"):
                     S.link("SysTest", tid, "VERIFIES", "SysFeature", ref_id)
 
-    link_note = f" (+{len(refs)} auto-links)" if refs else ""
-    print(f"  {pkg_id}: {len(fn_names)} test functions registered{link_note}")
+    return (pkg_id, len(fn_names), len(refs))
+
+
+def cmd_scan_tests(args, root, S):
+    valid_ids: set = set()
+    for label in ("SysFeature", "SysUserStory", "SysUseCase"):
+        for row in S.q("SELECT id FROM nodes WHERE label=?", (label,)):
+            valid_ids.add(row[0])
+
+    # ── --all: discover and scan every test file under the project root ──
+    if getattr(args, "all", False):
+        files = _discover_test_files(root)
+        if not files:
+            print("  scan-tests --all: no test files found under project root")
+            return
+        total_fns = total_links = 0
+        for f in files:
+            pkg_id, count, links = _scan_one_test_file(f, root, S, valid_ids)
+            if count:
+                link_note = f" (+{links} auto-links)" if links else ""
+                print(f"  {pkg_id}: {count} test functions registered{link_note}")
+            total_fns += count
+            total_links += links
+        print(f"\n  scan-tests --all: {len(files)} files, {total_fns} tests, {total_links} auto-links")
+        return
+
+    # ── --path: scan a single file ──
+    path = getattr(args, "path", "") or ""
+    if not path:
+        raise CommandError("scan-tests requires --path <file> or --all")
+
+    file_path = Path(path)
+    if not file_path.is_absolute():
+        file_path = root / file_path
+    if not file_path.exists():
+        raise CommandError(f"ERROR: file not found: {file_path}")
+
+    suffix = file_path.suffix.lower()
+    if suffix not in _SCANNER_MAP:
+        supported = ", ".join(sorted(_SCANNER_MAP))
+        raise CommandError(
+            f"scan-tests: unsupported file type '{suffix}'. Supported: {supported}"
+        )
+
+    pkg_id, count, links = _scan_one_test_file(file_path, root, S, valid_ids)
+    if not count:
+        print(f"  {path}: no test functions found")
+        return
+    link_note = f" (+{links} auto-links)" if links else ""
+    print(f"  {path}: {count} test functions registered{link_note}")
 
 
 # ── Phase 3 — session-driven AI review ───────────────────────────────────────
@@ -4534,7 +4698,7 @@ def cmd_open_viz(args, root, S):
     viz = next((p for p in candidates if p.exists()), None)
     port = getattr(args, "port", 8888) or 8888
     if not viz:
-        print("⚠  sys_edge_viz.py not found (visualiser not included in this build)", file=sys.stderr)
+        print("⚠  sys_edge_viz.py not found — is the Bootstrap Kit installed?", file=sys.stderr)
         for p in candidates:
             print(f"   Expected: {p}", file=sys.stderr)
         sys.exit(1)
